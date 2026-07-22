@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.log.*
+
+# Node/front-end
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# Docker / Compose
+docker-compose.override.yml
+docker-compose.local.yml
+*.env
+
+# Runtime / persistent service data (do NOT commit runtime data)
+# All service state lives outside the repo at ../services-data/<service>/...
+../services-data/
+
+# Secrets and credentials
+secrets.yaml
+secrets.yml
+client_secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Misc
+*.swp
+*.swo
+IDEA.md

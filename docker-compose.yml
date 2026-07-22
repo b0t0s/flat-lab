@@ -1,0 +1,958 @@
+services:
+  # House style: one comment line = one statement.
+  # A new line starts a new statement about a different thing.
+  # Multi-line soft-wrapped prose is not used in this file.
+
+  # --- GLOBAL REVERSE PROXY (CADDY) ---
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    container_name: caddy_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-your_duckdns_token_here}
+      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ../services-data/caddy/data:/data
+      - ../services-data/caddy/config:/config
+    networks:
+      - homelab_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # --- AUTOMATIC DOCKER PRUNER (Native Cleanup) ---
+  docker-pruner:
+    image: docker:cli
+    container_name: docker-pruner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: /bin/sh -c "while true; do sleep 86400; echo 'Starting daily prune...'; docker system prune -af --filter 'until=24h'; docker builder prune -af; echo 'Prune complete.'; done"
+
+  # --- MINECRAFT LEAF SERVER ---
+  minecraft-leaf:
+    image: itzg/minecraft-server
+    container_name: minecraft-leaf
+    restart: unless-stopped
+    ports:
+      - "25565:25565"
+    environment:
+      - EULA=TRUE
+      - TYPE=LEAF
+      - VERSION=1.21.11
+      - MEMORY=6G
+      - DIFFICULTY=hard
+      - ONLINE_MODE=FALSE
+      - OPS=Alvin,EugeoKen
+      - ICON=./server-icon.png
+    volumes:
+      - ../services-data/minecraft/data:/data
+      - ../services-data/minecraft/backups:/data/backups
+      - ../services-data/minecraft/plugins:/data/plugins
+    deploy:
+      resources:
+        limits:
+          memory: 6500M
+          cpus: '3.0'
+
+  # --- ZEROTIER (mesh VPN) ---
+  zerotier:
+    build:
+      context: ./zerotier
+      dockerfile: Dockerfile
+    container_name: zerotier
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    volumes:
+      - ${ZEROTIER_DATA_PATH:-../services-data/zerotier/data}:/var/lib/zerotier-one
+    environment:
+      - ZEROTIER_NETWORK_ID=${ZEROTIER_NETWORK_ID}
+    networks:
+      - homelab_net
+
+  # --- ZTNCUI (ZeroTier controller Web UI) ---
+  ztncui:
+    image: keynetworks/ztncui:latest
+    container_name: ztncui
+    restart: unless-stopped
+    ports:
+      - "${ZTNCUI_HOST_PORT:-3443}:3443/tcp"
+    volumes:
+      - ${ZEROTIER_DATA_PATH:-../services-data/zerotier/data}:/var/lib/zerotier-one
+      - ${ZTNCUI_DATA_PATH:-../services-data/ztncui/config}:/opt/ztncui/etc
+    environment:
+      - NODE_ENV=production
+      - HTTP_PORT=3443
+      - HTTPS_PORT=3443
+    networks:
+      - homelab_net
+
+  # --- ADGUARD HOME ---
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    volumes:
+      - ${ADGUARD_WORKDIR:-../services-data/adguardhome/workdir}:/opt/adguardhome/work
+      - ${ADGUARD_CONFDIR:-../services-data/adguardhome/confdir}:/opt/adguardhome/conf
+    ports:
+      - "${ADGUARD_DNS_TCP_PORT:-53}:53/tcp"
+      - "${ADGUARD_DNS_UDP_PORT:-53}:53/udp"
+      - "${ADGUARD_HTTP_PORT:-81}:81/tcp"
+      - "${ADGUARD_WEB_PORT:-3000}:3000/tcp"
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # --- OLLAMA ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ${OLLAMA_DATA_PATH:-../services-data/ollama/data}:/root/.ollama
+    networks:
+      - homelab_net
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=24h
+    deploy:
+      resources:
+        limits:
+          memory: 5500M
+          cpus: '3.5'
+
+  # --- OPEN WEBUI ---
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Kyiv
+      - ENABLE_SIGNUP=True
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports:
+      - "${OPEN_WEBUI_HOST_PORT:-3020}:8080"
+    volumes:
+      - ${OPEN_WEBUI_DATA_PATH:-../services-data/open-webui/data}:/app/backend/data
+    depends_on:
+      - ollama
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # --- ARCHIVEBOX ---
+  archivebox:
+    image: archivebox/archivebox:latest
+    container_name: archivebox
+    restart: unless-stopped
+    ports:
+      - "${ARCHIVEBOX_HOST_PORT:-8000}:8000"
+    environment:
+      - ALLOWED_HOSTS=*
+      - MEDIA_MAX_SIZE=750m
+      - TIMEOUT=120
+      - ADMIN_USERNAME=${ARCHIVEBOX_ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ARCHIVEBOX_ADMIN_PASS:-adminpassword}
+    volumes:
+      - ${ARCHIVEBOX_DATA_PATH:-../services-data/archivebox/data}:/data
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+  # --- CALIBRE WEB ---
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+    ports:
+      - "${CALIBRE_HOST_PORT:-8083}:8083"
+    volumes:
+      - ${CALIBRE_CONFIG_PATH:-../services-data/calibre-web/config}:/config
+      - ${CALIBRE_BOOKS_PATH:-../services-data/calibre-web/books}:/books
+    networks:
+      - homelab_net
+
+  # --- ONEDEV ---
+  onedev:
+    image: 1dev/server:latest
+    container_name: onedev
+    restart: unless-stopped
+    ports:
+      - "${ONEDEV_PORT1:-6610}:6610"
+      - "${ONEDEV_PORT2:-6611}:6611"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${ONEDEV_DATA_PATH:-../services-data/onedev/data}:/opt/onedev
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+
+  # --- NETALERTX ---
+  netalertx:
+    image: jokobsk/netalertx:latest
+    container_name: netalertx
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+    environment:
+      - TZ=Europe/Kyiv
+      - GR_TZ=Europe/Kyiv
+    volumes:
+      - ${NETALERTX_DATA_PATH:-../services-data/netalertx/data}:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # --- HOME ASSISTANT ---
+  home-assistant:
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    container_name: home-assistant
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    environment:
+      - TZ=Europe/Kyiv
+    volumes:
+      - ${HOME_ASSISTANT_CONFIG_PATH:-../services-data/home-assistant/config}:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+  # --- HOMEBOX ---
+  homebox:
+    image: ghcr.io/sysadminsmedia/homebox:latest
+    container_name: homebox
+    restart: unless-stopped
+    environment:
+      - HBOX_WEB_MAX_UPLOAD_SIZE=10
+    ports:
+      - "${HOMEBOX_HOST_PORT:-3100}:7777"
+    volumes:
+      - ${HOMEBOX_DATA_PATH:-../services-data/homebox/data}:/data
+    networks:
+      - homelab_net
+
+  # --- PHATCRACK STACK ---
+  phatcrack-frontend:
+    build:
+      context: ./phatcrack
+      dockerfile: Dockerfile.frontend
+    container_name: phatcrack-frontend
+    restart: unless-stopped
+    networks:
+      - homelab_net
+    depends_on:
+      - phatcrack-api
+
+  phatcrack-api:
+    build:
+      context: ./phatcrack
+      dockerfile: Dockerfile.api
+    container_name: phatcrack-api
+    restart: unless-stopped
+    depends_on:
+      phatcrack-db:
+        condition: service_healthy
+    user: ${PHATCRACK_USER:-root}
+    environment:
+      - INSECURE_ORIGIN
+      - PORT=3000
+      - DB_DSN=host=phatcrack-db user=phatcrack password=${DB_PASS:-phatcrack} dbname=phatcrack
+      - FILEREPO_PATH=/srv/filerepo
+      - BASE_URL=${BASE_URL}
+    volumes:
+      - ${FILEREPO_HOST_PATH:-../services-data/phatcrack/filerepo}:/srv/filerepo:z
+    networks:
+      - homelab_net
+
+  phatcrack-db:
+    image: postgres:15
+    container_name: postgres-db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phatcrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=phatcrack
+      - POSTGRES_PASSWORD=${DB_PASS:-phatcrack}
+    volumes:
+      - ../services-data/phatcrack-db/data:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # --- IT-TOOLS ---
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    ports:
+      - "${ITTOOLS_HOST_PORT:-8082}:80"
+    networks:
+      - homelab_net
+
+  # --- PROWLARR ---
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+    ports:
+      - "${PROWLARR_HOST_PORT:-9696}:9696"
+    volumes:
+      - ${PROWLARR_CONFIG_PATH:-../services-data/prowlarr/config}:/config
+    networks:
+      - homelab_net
+
+  # --- FLARESOLVERR ---
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${FLARESOLVERR_LOG_LEVEL:-info}
+      - LOG_HTML=${FLARESOLVERR_LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${FLARESOLVERR_CAPTCHA_SOLVER:-none}
+      - TZ=Europe/Kyiv
+    ports:
+      - "${FLARESOLVERR_HOST_PORT:-8191}:8191"
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # --- QBITTORRENT ---
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+      - WEBUI_PORT=8080
+    ports:
+      - "${QBITTORRENT_WEB_PORT:-8080}:8080"
+      - "${QBITTORRENT_TORRENT_PORT:-6881}:6881"
+      - "${QBITTORRENT_TORRENT_PORT:-6881}:6881/udp"
+    volumes:
+      - ${QBITTORRENT_CONFIG_PATH:-../services-data/qbittorrent/config}:/config
+      - ../services-data/media:/media
+    networks:
+      - homelab_net
+
+  # --- METUBE ---
+  metube:
+    image: ghcr.io/alexta69/metube
+    container_name: metube
+    restart: unless-stopped
+    ports:
+      - "${METUBE_HOST_PORT:-8081}:8081"
+    volumes:
+      - ../services-data/media/downloads:/downloads
+    networks:
+      - homelab_net
+
+  # --- PINGVIN SHARE ---
+  pingvin-share:
+    image: ghcr.io/stonith404/pingvin-share
+    container_name: pingvin-share
+    restart: unless-stopped
+    ports:
+      - "${PINGVIN_HOST_PORT:-3010}:3000"
+    volumes:
+      - ${PINGVIN_DATA_PATH:-../services-data/pingvin-share/data}:/opt/app/backend/data
+      - ${PINGVIN_IMAGES_PATH:-../services-data/pingvin-share/images}:/opt/app/frontend/public/img
+    networks:
+      - homelab_net
+
+  # --- UPTIME KUMA ---
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "${UPTIME_KUMA_PORT:-3001}:3001"
+    volumes:
+      - ${UPTIME_KUMA_DATA_PATH:-../services-data/uptime-kuma/data}:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homelab_net
+
+  # --- DOZZLE INIT ---
+  dozzle-init:
+    image: docker:cli
+    container_name: dozzle-init
+    restart: "no"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../services-data/dozzle/data:/data
+    environment:
+      - DOZZLE_USER=${DOZZLE_USER:-admin}
+      - DOZZLE_EMAIL=${DOZZLE_EMAIL:-admin@example.com}
+      - DOZZLE_PASSWORD=${DOZZLE_PASSWORD:-changeme}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ ! -f /data/users.yml ]; then
+          echo 'Generating Dozzle authentication file...'
+          docker run --rm amir20/dozzle:latest generate "$${DOZZLE_USER}" --email "$${DOZZLE_EMAIL}" --password "$${DOZZLE_PASSWORD}" --name "$${DOZZLE_USER}" > /data/users.yml
+          echo 'Authentication file created successfully.'
+        else
+          echo 'users.yml already exists. Skipping.'
+        fi
+
+  # --- DOZZLE ---
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    depends_on:
+      dozzle-init:
+        condition: service_completed_successfully
+    ports:
+      - "${DOZZLE_PORT:-8888}:8080"
+    environment:
+      - DOZZLE_AUTH_PROVIDER=simple
+      - DOZZLE_NO_ANALYTICS=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../services-data/dozzle/data:/data
+    networks:
+      - homelab_net
+
+  # --- HOMEPAGE ---
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    ports:
+      - "${HOMEPAGE_PORT:-3015}:3000"
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=dash.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org},${LAN_HOST:-your.lan.host},localhost
+    volumes:
+      - ${HOMEPAGE_CONFIG_PATH:-../services-data/homepage/config}:/app/config
+      - ${HOMEPAGE_ICONS_PATH:-../services-data/homepage/icons}:/app/public/icons
+    networks:
+      - homelab_net
+
+  # --- HOMEPAGE AUTO-CONFIGURATOR ---
+  homepage-auto-config:
+    image: alpine:latest
+    container_name: homepage-auto-config
+    restart: "no"
+    depends_on:
+      - homepage
+    environment:
+      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-vibe-killer-lab.duckdns.org}
+    volumes:
+      - ${HOMEPAGE_CONFIG_PATH:-../services-data/homepage/config}:/app/config
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo 'Waiting for Homepage to initialize config directory...'
+        while [ ! -d /app/config ]; do sleep 2; done
+        sleep 3
+        if ! grep -q 'adguard' /app/config/services.yaml 2>/dev/null; then
+          echo 'Injecting Homepage services configuration...'
+          echo "---
+        - Infrastructure:
+            - AdGuard Home:
+                icon: adguard-home.png
+                href: https://adguard.${DUCKDNS_DOMAIN}
+                description: Network-wide ad & tracker blocking
+            - Uptime Kuma:
+                icon: uptime-kuma.png
+                href: https://status.${DUCKDNS_DOMAIN}
+                description: Infrastructure monitoring
+            - Dozzle:
+                icon: dozzle.png
+                href: https://logs.${DUCKDNS_DOMAIN}
+                description: Real-time container logs
+            - NetAlertX:
+                icon: netalertx.png
+                href: https://netalertx.${DUCKDNS_DOMAIN}
+                description: Network Intrusion Detection
+
+        - Productivity & AI:
+            - OpenWebUI:
+                icon: open-webui.png
+                href: https://ai.${DUCKDNS_DOMAIN}
+                description: Local LLM Interface
+            - Seafile:
+                icon: seafile.png
+                href: https://cloud.${DUCKDNS_DOMAIN}
+                description: Personal Cloud Storage
+            - Memos:
+                icon: memos.png
+                href: https://memos.${DUCKDNS_DOMAIN}
+                description: Micro-blog and note-taking
+            - Ghost:
+                icon: ghost.png
+                href: https://blog.${DUCKDNS_DOMAIN}
+                description: Personal Portfolio & Blog
+            - ArchiveBox:
+                icon: archivebox.png
+                href: https://archive.${DUCKDNS_DOMAIN}
+                description: Personal internet archive
+
+        - Media & Entertainment:
+            - Jellyfin:
+                icon: jellyfin.png
+                href: https://jellyfin.${DUCKDNS_DOMAIN}
+                description: Media Server
+            - Navidrome:
+                icon: navidrome.png
+                href: https://music.${DUCKDNS_DOMAIN}
+                description: Music & Audiobooks
+            - Kavita:
+                icon: kavita.png
+                href: https://manga.${DUCKDNS_DOMAIN}
+                description: Manga & Comics server
+            - Calibre Web:
+                icon: calibre-web.png
+                href: https://books.${DUCKDNS_DOMAIN}
+                description: Digital Book Library
+
+        - Home & Automation:
+            - Home Assistant:
+                icon: home-assistant.png
+                href: https://home.${DUCKDNS_DOMAIN}
+                description: Smart Home Hub
+            - Node-RED:
+                icon: node-red.png
+                href: https://nodered.${DUCKDNS_DOMAIN}
+                description: Automation engine
+            - ChangeDetection:
+                icon: changedetection.png
+                href: https://monitor.${DUCKDNS_DOMAIN}
+                description: Webpage change monitor
+            - Homebox:
+                icon: homebox.png
+                href: https://inventory.${DUCKDNS_DOMAIN}
+                description: Home Inventory
+
+        - Downloads & Tools:
+            - Radarr:
+                icon: radarr.png
+                href: https://radarr.${DUCKDNS_DOMAIN}
+                description: Movies Manager
+            - Sonarr:
+                icon: sonarr.png
+                href: https://sonarr.${DUCKDNS_DOMAIN}
+                description: TV Shows Manager
+            - Prowlarr:
+                icon: prowlarr.png
+                href: https://media.${DUCKDNS_DOMAIN}
+                description: Indexer Manager
+            - qBittorrent:
+                icon: qbittorrent.png
+                href: https://torrent.${DUCKDNS_DOMAIN}
+                description: Torrent Client
+            - MeTube:
+                icon: metube.png
+                href: https://metube.${DUCKDNS_DOMAIN}
+                description: YouTube Downloader
+            - IT-Tools:
+                icon: it-tools.png
+                href: https://tools.${DUCKDNS_DOMAIN}
+                description: Handy tools for developers
+            - Pingvin Share:
+                icon: pingvin-share.png
+                href: https://share.${DUCKDNS_DOMAIN}
+                description: File sharing platform
+            - OneDev:
+                icon: onedev.png
+                href: https://git.${DUCKDNS_DOMAIN}
+                description: Git Platform
+            - Phatcrack:
+                icon: hashcat.png
+                href: https://phatcrack.${DUCKDNS_DOMAIN}
+                description: Hashcat GUI
+
+        - Proton Suite:
+            - Proton Mail:
+                icon: protonmail.png
+                href: https://mail.proton.me
+                description: Encrypted Email
+            - Proton Calendar:
+                icon: protoncalendar.png
+                href: https://calendar.proton.me
+                description: Secure Time Management
+            - Proton Drive:
+                icon: protondrive.png
+                href: https://drive.proton.me
+                description: E2EE Cloud Storage
+            - Proton Pass:
+                icon: protonpass.png
+                href: https://pass.proton.me
+                description: Password Manager
+            - Proton VPN:
+                icon: protonvpn.png
+                href: https://account.protonvpn.com
+                description: VPN Dashboard
+        " > /app/config/services.yaml
+          echo 'Homepage configuration successfully injected!'
+        else
+          echo 'Homepage configurations are already present. Skipping.'
+        fi
+
+  # --- WATCHTOWER ---
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    command: --cleanup --schedule "0 0 4 * * *" --label-enable
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Europe/Kyiv
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+    networks:
+      - homelab_net
+
+  # --- SEAFILE STACK ---
+  seafile:
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    restart: unless-stopped
+    ports:
+      - "${SEAFILE_HOST_PORT:-8084}:80"
+    environment:
+      - DB_HOST=seafile-db
+      - DB_ROOT_PASSWD=${SEAFILE_DB_ROOT_PASS:-db_dev_password}
+      - TIME_ZONE=Europe/Kyiv
+      - SEAFILE_ADMIN_EMAIL=${SEAFILE_ADMIN_EMAIL:-admin@example.com}
+      - SEAFILE_ADMIN_PASSWORD=${SEAFILE_ADMIN_PASS:-adminpassword}
+      - SEAFILE_SERVER_LETSENCRYPT=false
+    volumes:
+      - ${SEAFILE_DATA_PATH:-../services-data/seafile/data}:/shared
+    depends_on:
+      - seafile-db
+      - seafile-memcached
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  seafile-db:
+    image: mariadb:10.11
+    container_name: seafile-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SEAFILE_DB_ROOT_PASS:-db_dev_password}
+      - MYSQL_LOG_CONSOLE=true
+      - DEBUG=true
+    volumes:
+      - ${SEAFILE_DB_PATH:-../services-data/seafile/db}:/var/lib/mysql
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  seafile-memcached:
+    image: memcached:1.6
+    container_name: seafile-memcached
+    restart: unless-stopped
+    entrypoint: memcached -m 256
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  seafile-auto-config:
+    image: docker:cli
+    container_name: seafile-auto-config
+    restart: "no"
+    depends_on:
+      - seafile
+    volumes:
+      - ${SEAFILE_DATA_PATH:-../services-data/seafile/data}:/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: |
+      /bin/sh -c "
+        echo 'Waiting for Seafile to initialize config files...'
+        while [ ! -f /shared/seafile/conf/seahub_settings.py ]; do sleep 3; done
+        sleep 5
+        if ! grep -q 'CSRF_TRUSTED_ORIGINS' /shared/seafile/conf/seahub_settings.py; then
+          echo 'Injecting HTTPS and CSRF settings...'
+          echo \"\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"SERVICE_URL = 'https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}'\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"FILE_SERVER_ROOT = 'https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}/seafhttp'\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"CSRF_TRUSTED_ORIGINS = ['https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}']\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')\" >> /shared/seafile/conf/seahub_settings.py
+          echo 'Restarting Seafile container to apply changes...'
+          docker restart seafile
+        else
+          echo 'Custom configurations are already present. Exiting.'
+        fi
+      "
+
+  # --- RUSTDESK SERVER ---
+  rustdesk-hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbs
+    restart: unless-stopped
+    command: hbbs -r ${RUSTDESK_RELAY_IP:-${LAN_HOST}}:21117
+    ports:
+      - "21115:21115"
+      - "21116:21116"
+      - "21116:21116/udp"
+      - "21118:21118"
+    volumes:
+      - ${RUSTDESK_DATA_PATH:-../services-data/rustdesk/data}:/root
+    networks:
+      - homelab_net
+
+  rustdesk-hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbr
+    restart: unless-stopped
+    command: hbbr
+    ports:
+      - "21117:21117"
+      - "21119:21119"
+    volumes:
+      - ${RUSTDESK_DATA_PATH:-../services-data/rustdesk/data}:/root
+    networks:
+      - homelab_net
+
+  # --- RADARR (Movies Manager) ---
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+    ports:
+      - "${RADARR_HOST_PORT:-7878}:7878"
+    volumes:
+      - ../services-data/radarr/config:/config
+      - ../services-data/media:/media
+    networks:
+      - homelab_net
+
+  # --- SONARR (TV Shows Manager) ---
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+    ports:
+      - "8989:8989"
+    volumes:
+      - ../services-data/sonarr/config:/config
+      - ../services-data/media:/media
+    networks:
+      - homelab_net
+
+  # --- JELLYFIN (Media Server) ---
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Kyiv
+    ports:
+      - "${JELLYFIN_HOST_PORT:-8096}:8096"
+    volumes:
+      - ../services-data/jellyfin/config:/config
+      - ../services-data/media:/media
+    networks:
+      - homelab_net
+
+  # --- NAVIDROME (Music & Audiobooks) ---
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info  
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=""
+    ports:
+      - "${NAVIDROME_HOST_PORT:-4533}:4533"
+    volumes:
+      - ../services-data/navidrome/data:/data
+      - ../services-data/media/music:/music:ro
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  # --- KAVITA (Manga, Comics, eBooks) ---
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Kyiv
+    ports:
+      - "${KAVITA_HOST_PORT:-5002}:5000"
+    volumes:
+      - ../services-data/kavita/config:/kavita/config
+      - ../services-data/media/books:/manga
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 600M
+
+  # --- NODE-RED (Home Automation Engine) ---
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Kyiv
+    ports:
+      - "${NODERED_HOST_PORT:-1880}:1880"
+    volumes:
+      - ../services-data/nodered/data:/data
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # --- GHOST (Personal Blog & Portfolio) ---
+  ghost:
+    image: ghost:5-alpine
+    container_name: ghost
+    restart: unless-stopped
+    environment:
+      - url=https://blog.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org} 
+      - database__client=mysql
+      - database__connection__host=ghost-db
+      - database__connection__user=ghost
+      - database__connection__password=${GHOST_DB_PASS:-supersecret_ghost_pass}
+      - database__connection__database=ghost
+    ports:
+      - "${GHOST_HOST_PORT:-2368}:2368"
+    volumes:
+      - ../services-data/ghost/content:/var/lib/ghost/content
+    depends_on:
+      - ghost-db
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  ghost-db:
+    image: mariadb:10.11
+    container_name: ghost-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${GHOST_DB_ROOT_PASS:-root_ghost_pass}
+      - MYSQL_USER=ghost
+      - MYSQL_PASSWORD=${GHOST_DB_PASS:-supersecret_ghost_pass}
+      - MYSQL_DATABASE=ghost
+    volumes:
+      - ../services-data/ghost-db/data:/var/lib/mysql
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  # --- MEMOS (Note-taking) ---
+  memos:
+    image: neosmemo/memos:stable
+    container_name: memos
+    restart: unless-stopped
+    ports:
+      - "${MEMOS_HOST_PORT:-5230}:5230"
+    volumes:
+      - ../services-data/memos/data:/var/opt/memos
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # --- CHANGEDETECTION.IO (Website Monitor) ---
+  changedetection:
+    image: dgtlmoon/changedetection.io:latest
+    container_name: changedetection
+    restart: unless-stopped
+    ports:
+      - "${CHANGEDETECTION_HOST_PORT:-5000}:5000"
+    volumes:
+      - ../services-data/changedetection/data:/datastore
+    networks:
+      - homelab_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+networks:
+  homelab_net:
+    driver: bridge

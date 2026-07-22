@@ -1,0 +1,9 @@
+* text=auto
+
+# Ensure LF line endings for scripts and Dockerfiles
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text
+*.txt text

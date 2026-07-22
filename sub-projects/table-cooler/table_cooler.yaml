@@ -1,0 +1,30 @@
+esphome:
+  name: table-cooler
+  friendly_name: Table Cooler
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+api:
+
+logger:
+
+ota:
+  - platform: esphome
+
+output:
+  - platform: ledc
+    pin: GPIO25
+    frequency: 25000 Hz
+    id: air_con_pwm
+
+fan:
+  - platform: speed
+    output: air_con_pwm
+    name: "Table Cooler Fan"

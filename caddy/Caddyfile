@@ -1,0 +1,177 @@
+*.{$DUCKDNS_DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+        resolvers 1.1.1.1 8.8.8.8
+    }
+
+    @dash host dash.{$DUCKDNS_DOMAIN}
+    handle @dash {
+        reverse_proxy homepage:3000
+    }
+
+    @status host status.{$DUCKDNS_DOMAIN}
+    handle @status {
+        reverse_proxy uptime-kuma:3001
+    }
+
+    @logs host logs.{$DUCKDNS_DOMAIN}
+    handle @logs {
+        reverse_proxy dozzle:8080
+    }
+
+    @netalertx host netalertx.{$DUCKDNS_DOMAIN}
+    handle @netalertx {
+        encode gzip
+        reverse_proxy host.docker.internal:20211 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    @adguard host adguard.{$DUCKDNS_DOMAIN}
+    handle @adguard {
+        reverse_proxy adguardhome:81
+    }
+
+    @ai host ai.{$DUCKDNS_DOMAIN}
+    handle @ai {
+        reverse_proxy open-webui:8080
+    }
+
+    @memos host memos.{$DUCKDNS_DOMAIN}
+    handle @memos {
+        reverse_proxy memos:5230
+    }
+
+    @blog host blog.{$DUCKDNS_DOMAIN}
+    handle @blog {
+        reverse_proxy ghost:2368
+    }
+
+    @archive host archive.{$DUCKDNS_DOMAIN}
+    handle @archive {
+        reverse_proxy archivebox:8001
+    }
+
+    @books host books.{$DUCKDNS_DOMAIN}
+    handle @books {
+        reverse_proxy calibre-web:8083
+    }
+
+    @share host share.{$DUCKDNS_DOMAIN}
+    handle @share {
+        reverse_proxy pingvin-share:3000
+    }
+
+    @cloud host cloud.{$DUCKDNS_DOMAIN}
+    handle @cloud {
+        reverse_proxy seafile:80
+    }
+
+    @jellyfin host jellyfin.{$DUCKDNS_DOMAIN}
+    handle @jellyfin {
+        reverse_proxy jellyfin:8096
+    }
+
+    @music host music.{$DUCKDNS_DOMAIN}
+    handle @music {
+        reverse_proxy navidrome:4533
+    }
+
+    @manga host manga.{$DUCKDNS_DOMAIN}
+    handle @manga {
+        reverse_proxy kavita:5002
+    }
+
+    @nodered host nodered.{$DUCKDNS_DOMAIN}
+    handle @nodered {
+        reverse_proxy nodered:1880
+    }
+
+    @home host home.{$DUCKDNS_DOMAIN}
+    handle @home {
+        reverse_proxy host.docker.internal:8123
+    }
+
+    @monitor host monitor.{$DUCKDNS_DOMAIN}
+    handle @monitor {
+        reverse_proxy changedetection:5000
+    }
+
+    @inventory host inventory.{$DUCKDNS_DOMAIN}
+    handle @inventory {
+        reverse_proxy homebox:7777
+    }
+
+    @radarr host radarr.{$DUCKDNS_DOMAIN}
+    handle @radarr {
+        reverse_proxy radarr:7878
+    }
+
+    @sonarr host sonarr.{$DUCKDNS_DOMAIN}
+    handle @sonarr {
+        reverse_proxy sonarr:8989
+    }
+
+    @media host media.{$DUCKDNS_DOMAIN}
+    handle @media {
+        reverse_proxy prowlarr:9696
+    }
+
+    @torrent host torrent.{$DUCKDNS_DOMAIN}
+    handle @torrent {
+        reverse_proxy qbittorrent:8080
+    }
+
+    @metube host metube.{$DUCKDNS_DOMAIN}
+    handle @metube {
+        reverse_proxy metube:8081
+    }
+
+    @tools host tools.{$DUCKDNS_DOMAIN}
+    handle @tools {
+        reverse_proxy it-tools:80
+    }
+
+    @git host git.{$DUCKDNS_DOMAIN}
+    handle @git {
+        request_body {
+            max_size 512MiB
+        }
+        reverse_proxy onedev:6610 {
+            header_up Host {upstream_hostport}
+            header_up X-Forwarded-Host {host}
+        }
+    }
+
+    @phatcrack host phatcrack.{$DUCKDNS_DOMAIN}
+    handle @phatcrack {
+        encode gzip
+
+        header {
+            Strict-Transport-Security max-age=31536000;
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer-when-downgrade
+        }
+
+        handle /agent-assets/* {
+            reverse_proxy agent-server:80
+        }
+        handle /api/* {
+            header Content-Security-Policy "default-src 'none'"
+            reverse_proxy phatcrack-api:3000
+        }
+        handle {
+            header Content-Security-Policy "default-src 'self'; object-src 'none'; script-src 'self' 'unsafe-eval'; img-src 'self' data:; style-src 'self' data: 'unsafe-inline'"
+            reverse_proxy phatcrack-frontend:80
+        }
+    }
+
+    # Fallback
+    handle {
+        abort
+    }
+}
