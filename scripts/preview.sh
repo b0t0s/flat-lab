@@ -143,7 +143,6 @@ rsshub	RSS feed generator (works with miniflux).
 passbolt	Team password manager with GPG encryption. OpenPGP + audit logs.
 passbolt-db	MariaDB backend for passbolt.
 aliasvault	Privacy-first password manager + email aliasing. E2E encrypted.
-psono	Enterprise password + secret sharing. Supports offline clients.
 psono-db	MariaDB backend for psono.
 psono-server	Enterprise password + secret sharing. Supports offline clients.
 infisical	Secrets management for devs. Vault/Doppler alternative. PKI + dynamic secrets.
@@ -157,7 +156,6 @@ memos	Lightweight notes + microblog. Markdown, tagging, sharing.
 metube	Self-hosted YouTube downloader. yt-dlp + web UI.
 movim-db	Postgres backend for movim.
 movim	XMPP social network. Microblogging, groups, file sharing.
-minecraft-leaf	Minecraft server wrapper with web UI.
 netalertx	Network scanner + device tracker with alerts.
 navidrome	Music streaming server. Subsonic-compatible.
 ntfy	Push notification server. Subscribe via app, send via HTTP API.
@@ -196,9 +194,23 @@ upsnap	Wake-on-LAN with web UI.
 wallos	Subscription tracker with currency support.
 watchtower	Auto-updates running containers to latest image.
 whois	WHOIS / RDAP lookup web UI.
-wger	Workout/fitness tracker with exercise library and routines.
 zerotier-init	One-shot init: writes local zerotier config.
 zerotier	Mesh VPN client. Joins network from ZEROTIER_NETWORK_ID.
+uptime-kuma	Uptime monitor. HTTP/TCP/ping checks with status page.
+nodered	Node-RED. Visual wiring for IoT automations (mqtt, http, gpio).
+nodered-init	One-shot init: chowns Node-RED data dir to match runtime user.
+snikket-server	Snikket XMPP server (Prosody). Personal messaging for the household.
+snikket-proxy	Snikket web reverse-proxy. ACME HTTP-01 challenges + TLS termination.
+snikket-portal	Snikket web portal. Self-service account creation/invite UI.
+snikket-certs	Snikket ACME cert manager. Renews Let's Encrypt certs.
+flaresolverr	Cloudflare challenge solver. Proxy for *arr / web scrapers.
+calibre-web	Calibre content server. Browse/read epub library in browser.
+radarr	Movie collection manager. Watches *arr and triggers qbittorrent.
+sonarr	TV series collection manager. Watches *arr and triggers qbittorrent.
+minecraft	Minecraft Java/Bedrock server. Multi-version, easy config via env.
+managemeals	Meal-planning + recipe + grocery list. Multi-user household.
+myspeed	Self-hosted speedtest with rolling history and per-server graph.
+convertx	Self-hosted file converter. ffmpeg / pandoc / image / pdf / etc.
 HINTS
 }
 

@@ -9,16 +9,13 @@ services:
     command:
       - /app/bin/homepage
       - config
-      - /app-config/widgets.yaml
-      - /app-config/services.yaml
-      - /app-config/settings.yaml
-      - /app-config/bookmarks.yaml
-      - /app-config/docker.yaml
-    depends_on:
-      homepage:
-        condition: service_completed_successfully
+      - /app/config/widgets.yaml
+      - /app/config/services.yaml
+      - /app/config/settings.yaml
+      - /app/config/bookmarks.yaml
+      - /app/config/docker.yaml
     volumes:
-      - ../services-data/system/homepage/config:/app-config
+      - ../services-data/system/homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   # --- HOMEPAGE (dashboard) ---
@@ -34,10 +31,15 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     restart: unless-stopped
+    depends_on:
+      homepage-auto-config:
+        condition: service_completed_successfully
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.${DUCKDNS_DOMAIN:-localhost},dash.${DUCKDNS_DOMAIN:-localhost},localhost,127.0.0.1}
     ports:
       - "${HOMEPAGE_PORT:-3015}:3000"
     volumes:
-      - ../services-data/system/homepage/config:/app-config
+      - ../services-data/system/homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - homelab_net
@@ -55,10 +57,36 @@ services:
     image: glanceapp/glance:latest
     container_name: glance
     restart: unless-stopped
+    depends_on:
+      glance-init:
+        condition: service_completed_successfully
     ports:
       - "${GLANCE_PORT:-8088}:8080"
     volumes:
       - ../services-data/system/glance/config:/app/config
+    networks:
+      - homelab_net
+
+  # --- GLANCE INIT (seed default config if absent) ---
+  glance-init:
+    profiles: ["dashboard"]
+    image: alpine:latest
+    container_name: glance-init
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        mkdir -p /app/config
+        if [ ! -f /app/config/glance.yml ]; then
+          echo "[glance-init] seeding default config..."
+          cp /seed/glance.yml /app/config/glance.yml
+        else
+          echo "[glance-init] config exists, leaving alone"
+        fi
+    volumes:
+      - ../services-data/system/glance/config:/app/config
+      - ./glance/glance.yml:/seed/glance.yml:ro
     networks:
       - homelab_net
 

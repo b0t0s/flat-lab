@@ -196,7 +196,7 @@ services:
       - homepage.href=https://news.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["productivity"]
-    image: ghcr.io/pentacent/keila:latest
+    image: pentacent/keila:latest
     container_name: keila
     restart: unless-stopped
     environment:
@@ -243,7 +243,7 @@ services:
       - homepage.href=https://notes.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["productivity"]
-    image: ghcr.io/toeverything/affine:latest
+    image: ghcr.io/toeverything/affine:stable
     container_name: affine
     restart: unless-stopped
     environment:

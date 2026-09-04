@@ -31,7 +31,7 @@ services:
       - homepage.href=https://inventory.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["smarthome"]
-    image: xook-io/homebox:latest
+    image: sysadminsmedia/homebox:latest
     container_name: homebox
     restart: unless-stopped
     environment:

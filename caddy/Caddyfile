@@ -275,9 +275,14 @@
         reverse_proxy snikket-portal:80
     }
 
-    @xmpp host xmpp.{$DUCKDNS_DOMAIN}
-    handle @xmpp {
+    @converse host converse.{$DUCKDNS_DOMAIN}
+    handle @converse {
         reverse_proxy conversejs:8080
+    }
+
+    @element host element.{$DUCKDNS_DOMAIN}
+    handle @element {
+        reverse_proxy element-web:80
     }
 
     @movim host movim.{$DUCKDNS_DOMAIN}
@@ -321,6 +326,16 @@
             header_up X-Forwarded-For {remote_host}
             header_up X-Real-IP {remote_host}
         }
+    }
+
+    @feeds host feeds.{$DUCKDNS_DOMAIN}
+    handle @feeds {
+        reverse_proxy rsshub:1200
+    }
+
+    @perplexica host perplexica.{$DUCKDNS_DOMAIN}
+    handle @perplexica {
+        reverse_proxy perplexica:3000
     }
 
     @phatcrack host phatcrack.{$DUCKDNS_DOMAIN}

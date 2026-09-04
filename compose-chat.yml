@@ -4,7 +4,7 @@ services:
   snikket-proxy:
     profiles: ["chat"]
     container_name: snikket-proxy
-    image: snikket/snikket-web-proxy:latest
+    image: snikket/snikket-web-proxy:dev
     network_mode: host
     env_file:
       - ${SNIKKET_CONF_PATH:-./snikket.conf}
@@ -17,7 +17,7 @@ services:
   snikket-certs:
     profiles: ["chat"]
     container_name: snikket-certs
-    image: snikket/snikket-cert-manager:latest
+    image: snikket/snikket-cert-manager:dev
     network_mode: host
     env_file:
       - ${SNIKKET_CONF_PATH:-./snikket.conf}
@@ -30,7 +30,7 @@ services:
   snikket-portal:
     profiles: ["chat"]
     container_name: snikket-portal
-    image: snikket/snikket-web-portal:latest
+    image: snikket/snikket-web-portal:dev
     network_mode: host
     env_file:
       - ${SNIKKET_CONF_PATH:-./snikket.conf}
@@ -42,12 +42,12 @@ services:
       - homepage.group=Chat
       - homepage.name=snikket-server
       - homepage.icon=xmpp
-      - homepage.description=XMPP chat server (Snikket)
+      - homepage.description=Snikket XMPP server (Prosody). Personal messaging for the household.
       - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["chat"]
     container_name: snikket-server
-    image: snikket/snikket-server:latest
+    image: snikket/snikket-server:dev
     network_mode: host
     env_file:
       - ${SNIKKET_CONF_PATH:-./snikket.conf}
@@ -56,13 +56,14 @@ services:
     restart: unless-stopped
 
   # --- CONVERSE.JS (XMPP web client, alt entrypoint) ---
+# --- CONVERSE.JS (XMPP web client, alt entrypoint) ---
   conversejs:
     labels:
       - homepage.group=Chat
       - homepage.name=conversejs
       - homepage.icon=conversejs
       - homepage.description=XMPP web client
-      - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.href=https://converse.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["chat"]
     image: conversejs/conversejs:latest
@@ -97,7 +98,7 @@ services:
       - homepage.href=https://movim.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["chat"]
-    image: movim/movim:latest
+    image: ghcr.io/movim/movim:latest
     container_name: movim
     restart: unless-stopped
     environment:
@@ -281,7 +282,7 @@ services:
       - homepage.name=element
       - homepage.icon=element
       - homepage.description=Matrix web client
-      - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.href=https://element.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["chat"]
     image: vectorim/element-web:latest

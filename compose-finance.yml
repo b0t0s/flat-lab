@@ -72,6 +72,7 @@ services:
       - homelab_net
 
   # --- MONICA (personal relationship manager / CRM) ---
+# --- MONICA (personal relationship manager / CRM) ---
   monica:
     labels:
       - homepage.group=Finance
@@ -128,7 +129,7 @@ services:
       - homepage.href=https://time.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["finance"]
-    image: ghcr.io/kimai/kimai2:latest
+    image: kimai/kimai2:latest
     container_name: kimai
     restart: unless-stopped
     environment:

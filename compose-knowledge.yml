@@ -10,7 +10,7 @@ services:
       - homepage.href=https://memos.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["knowledge"]
-    image: neosmemo/memos:latest
+    image: neosmemo/memos:stable
     container_name: memos
     restart: unless-stopped
     ports:
@@ -33,6 +33,16 @@ services:
       - MYSQL_PASSWORD=${GHOST_DB_PASS}
     volumes:
       - ${GHOST_DB_DATA:-../services-data/system/ghost-db}:/var/lib/mysql
+    # If the data dir was left in a half-initialized state by a previous
+    # failed run (MySQL aborts with "data directory has files in it"),
+    # Ghost can't connect (`getaddrinfo ENOTFOUND ghost-db` cascades from
+    # MySQL never becoming ready). Healthcheck ensures Ghost waits until
+    # MySQL is actually accepting connections.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${GHOST_DB_ROOT_PASS}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - homelab_net
 
@@ -55,9 +65,10 @@ services:
       - database__connection__user=ghost
       - database__connection__password=${GHOST_DB_PASS}
       - database__connection__database=ghost
-      - url=http://${DUCKDNS_DOMAIN:-localhost}
+      - url=https://${DUCKDNS_DOMAIN:-localhost}
     depends_on:
-      - ghost-db
+      ghost-db:
+        condition: service_healthy
     ports:
       - "${GHOST_HOST_PORT:-2368}:2368"
     volumes:
@@ -338,16 +349,20 @@ services:
     container_name: outline
     restart: unless-stopped
     depends_on:
-      - outline-db
-      - outline-redis
+      outline-db:
+        condition: service_healthy
+      outline-redis:
+        condition: service_healthy
+      outline-init:
+        condition: service_completed_successfully
+    env_file:
+      - ../services-data/system/outline/secrets/outline.env
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://outline:${OUTLINE_DB_PASSWORD}@outline-db:5432/outline
       - REDIS_URL=redis://outline-redis:6379
       - URL=https://docs.${DUCKDNS_DOMAIN:-localhost}
       - PORT=3000
-      - SECRET_KEY=${OUTLINE_SECRET}
-      - UTILS_SECRET=${OUTLINE_UTILS_SECRET}
       - FILE_STORAGE=local
       - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
     ports:
@@ -356,6 +371,17 @@ services:
       - ${OUTLINE_DATA:-../services-data/system/outline}:/var/lib/outline/data
     networks:
       - homelab_net
+
+  # --- OUTLINE INIT (generates SECRET_KEY + UTILS_SECRET once, persists) ---
+  outline-init:
+    profiles: ["knowledge"]
+    image: alpine:latest
+    container_name: outline-init
+    restart: "no"
+    command: ["/scripts/outline-init.sh"]
+    volumes:
+      - ../services-data/system/outline/secrets:/secrets
+      - ./scripts/outline-init.sh:/scripts/outline-init.sh:ro
 
   # --- OUTLINE DB (postgres) ---
   outline-db:
@@ -369,6 +395,11 @@ services:
       - POSTGRES_PASSWORD=${OUTLINE_DB_PASSWORD}
     volumes:
       - ${OUTLINE_DB_DATA:-../services-data/system/outline/postgres}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outline -d outline"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - homelab_net
 
@@ -378,6 +409,11 @@ services:
     image: redis:7-alpine
     container_name: outline-redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - homelab_net
 
@@ -466,6 +502,10 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-Europe/Kyiv}
+      - SIYUAN_ACCESS_AUTH_CODE_BYPASS=${SIYUAN_ACCESS_AUTH_CODE_BYPASS:-true}
+    command:
+      - serve
+      - --workspace=/siyuan/workspace/
     ports:
       - "${SIYUAN_PORT:-6806}:6806"
     volumes:
@@ -481,7 +521,7 @@ services:
       - homepage.name=rsshub
       - homepage.icon=rsshub
       - homepage.description=RSS feed generator
-      - homepage.href=https://rss.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.href=https://feeds.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["knowledge"]
     image: diygod/rsshub:latest

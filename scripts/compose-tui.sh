@@ -12,6 +12,11 @@ NETWORK_NAME="homelab_net"
 ACTION="${1:-menu}"
 STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/flat-lab-tui"
 STATE_FILE="$STATE_DIR/state"
+# Resolve scripts dir to absolute path so fzf's preview pane can find
+# preview.sh regardless of the operator's current working directory.
+# fzf runs preview commands via sh -c; if the user is in /tmp but the
+# script is in ~/repos/flat-lab/scripts, a relative './preview.sh' fails.
+SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # ---------- HELPERS ----------
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -106,21 +111,13 @@ pick_categories() {
     printf '%s %s (%s services)\n' "$marker" "$cat" "$count" >> "$tmpfile"
   done < <(discover_categories)
 
-  # Build the fzf action sequence: +select+down for every X-marked line, then
-  # +first to put cursor back at top. fzf's transform action expects a SINGLE
-  # LINE of concatenated actions, so we use printf with no newline (not awk
-  # with newlines). If no preselects, leave $actions empty and skip the bind
-  # entirely (so fzf doesn't see "transform:" with nothing after).
-  local actions
-  actions=$(awk '/^X/ {printf "+select+down"} END {if (NR>0) printf "+first"}' "$tmpfile")
-
-  # Build the optional bind argument only if there's something to preselect.
-  # Adding --bind="start:transform:" with empty action makes fzf 0.60 print
-  # "unknown action: transform:" and exit immediately.
-  local transform_bind=()
-  if [ -n "$actions" ]; then
-    transform_bind=(--bind="start:transform:$actions")
-  fi
+  # Pre-select mechanism: we use `--multi` with no pre-selection. Earlier
+  # versions of this script used `--bind 'start:transform:...'` to pre-toggle
+  # items based on saved state, but fzf 0.35+ on some platforms rejects the
+  # transform action with "unknown action: transform:" even when given a valid
+  # expression. We disable pre-selection; the operator space-toggles to pick.
+  # The trade-off is no auto-restore on launch (use --clear-state to wipe the
+  # old state file). The menu still works.
 
   local result
   result=$(fzf --multi \
@@ -130,9 +127,8 @@ pick_categories() {
       --marker='X' \
       --tac \
       --no-sort \
-      --preview="$(dirname "$0")/preview.sh category {}" \
+      --preview="$SCRIPTS_DIR/preview.sh category {}" \
       --preview-window='right:50%:wrap' \
-      "${transform_bind[@]}" \
       < "$tmpfile" \
     | awk '{print $2}') || true
   rm -f "$tmpfile"
@@ -163,20 +159,11 @@ pick_services() {
     done < <(list_services "$cat")
   done
 
-  # Build the fzf action sequence: +select+down for every X-marked line, then
-  # +first. Single-line output (no newlines) — required by fzf transform syntax.
-  # If no preselects, leave $actions empty and skip the bind entirely (so fzf
-  # doesn't see "transform:" with nothing after).
-  local actions
-  actions=$(awk '/^X/ {printf "+select+down"} END {if (NR>0) printf "+first"}' "$tmpfile")
-
-  # Build the optional bind argument only if there's something to preselect.
-  # Adding --bind="start:transform:" with empty action makes fzf 0.60 print
-  # "unknown action: transform:" and exit immediately.
-  local transform_bind=()
-  if [ -n "$actions" ]; then
-    transform_bind=(--bind="start:transform:$actions")
-  fi
+  # Pre-select disabled — see pick_categories for rationale. fzf 0.35+ on
+  # some platforms rejects start:transform. We use plain --multi; operator
+  # space-toggles to pick. The saved state file is still useful (so the
+  # operator can see last session in ~/.config/flat-lab-tui/state) but it
+  # isn't auto-restored on next launch.
 
   local result
   result=$(fzf --multi \
@@ -186,9 +173,8 @@ pick_services() {
       --marker='X' \
       --with-nth='2..' \
       --delimiter=' ' \
-      --preview="$(dirname "$0")/preview.sh service {}" \
+      --preview="$SCRIPTS_DIR/preview.sh service {}" \
       --preview-window='right:50%:wrap' \
-      "${transform_bind[@]}" \
       < "$tmpfile" \
     | awk '{print $2}') || true
   rm -f "$tmpfile"
@@ -339,7 +325,25 @@ run_docker() {
   local -a flags
   while IFS= read -r line; do flags+=("$line"); done < <(build_compose_flags "${cats[@]}")
   info "docker compose ${flags[*]} $action ${services[*]}"
-  docker compose "${flags[@]}" "$action" "${services[@]}"
+
+  # For up: run detached (-d) so the TUI does NOT attach to the container
+  # logs. Without -d, docker compose blocks on the log stream until the
+  # operator hits Ctrl-C, which is annoying and meant the operator could
+  # not launch more than one batch at a time.
+  #
+  # For restart: `docker compose restart` is already non-blocking — it
+  # sends SIGTERM/SIGHUP and returns immediately. Adding -d here would
+  # error with `unknown shorthand flag: 'd' in -d` because `restart`
+  # doesn't accept that flag.
+  #
+  # For ps/logs/down/pull/rm: keep current behaviour — these are
+  # short-lived queries and the operator expects to see output.
+  local -a detached_args=()
+  case "$action" in
+    up) detached_args=(-d) ;;
+  esac
+
+  docker compose "${flags[@]}" "$action" "${detached_args[@]}" "${services[@]}"
 }
 
 # ---------- NON-INTERACTIVE FIRST ----------
@@ -630,9 +634,57 @@ EOF
       # Persist this selection so the next launch pre-toggles the same items.
       save_state "$selected_cats" "$selected_services"
 
+      # Execute the docker command and tee everything to a dated log file
+      # under $STATE_DIR/logs/. The TUI prints the command first so the
+      # operator sees exactly what ran, then runs it (via run_docker) and
+      # captures full stdout+stderr in the log via `tee -a`. On exit the
+      # operator can `tail -f ~/.config/flat-lab-tui/logs/<latest>.log`
+      # to follow, or just read it back.
+      logdir="$STATE_DIR/logs"
+      mkdir -p "$logdir"
+      ts="$(date +%Y%m%d-%H%M%S)"
+      logfile="$logdir/${action}-${ts}.log"
+      flags_file="$(mktemp)"
+      build_compose_flags > "$flags_file"
+      flags_str="$(paste -sd' ' "$flags_file")"
+
+      # For up, run_docker adds -d so we don't attach to logs.
+      # For restart, `docker compose restart` is already non-blocking.
+      # Show the relevant flag in both the banner and the logged command
+      # line so the operator can replay the command later by copy-paste.
+      case "$action" in
+        up) detached_flag="-d" ;;
+        *)  detached_flag="" ;;
+      esac
+
+      info "running:"
+      info "  cd $COMPOSE_DIR && docker compose $flags_str $action $detached_flag $selected_services"
+      info "logging to: $logfile"
+      echo
+
+      {
+        printf '# flat-lab TUI run\n'
+        printf '# command: cd %s && docker compose %s %s %s %s\n' \
+          "$COMPOSE_DIR" \
+          "$flags_str" \
+          "$action" \
+          "$detached_flag" \
+          "$selected_services"
+        printf '# started: %s\n' "$(date -Iseconds)"
+        printf '# ----\n'
+      } > "$logfile"
+      rm -f "$flags_file"
+
+      # Run docker. Output goes to BOTH the terminal (operator sees live
+      # progress, SearXNG engine errors, etc.) AND the logfile.
       # shellcheck disable=SC2086
-      run_docker "$action" $selected_services
-      exit $?
+      run_docker "$action" $selected_services 2>&1 | tee -a "$logfile"
+      rc=${PIPESTATUS[0]}
+
+      printf '# ----\n# finished: %s (exit %s)\n' "$(date -Iseconds)" "$rc" >> "$logfile"
+      info "exit code: $rc"
+      info "log saved: $logfile"
+      exit $rc
     done
     ;;
   *)

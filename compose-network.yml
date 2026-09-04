@@ -27,6 +27,8 @@ services:
       - homepage.name=zerotier
       - homepage.icon=zerotier
       - homepage.description=Mesh VPN client
+      - homepage.href=https://zerotier.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
     profiles: ["network"]
     build:
       context: ./zerotier
@@ -55,6 +57,8 @@ services:
       - homepage.name=rustdesk-hbbs
       - homepage.icon=rustdesk
       - homepage.description=RustDesk ID relay server
+      - homepage.href=https://rustdesk.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
     profiles: ["network"]
     image: rustdesk/rustdesk-server:latest
     container_name: rustdesk-hbbs
@@ -108,6 +112,7 @@ services:
       - homelab_net
 
   # --- WHOIS (domain/IP lookup service) ---
+# --- WHOIS (domain/IP lookup service) ---
   whois:
     labels:
       - homepage.group=Network
@@ -136,6 +141,7 @@ services:
       - homelab_net
 
   # --- MYSPEED (speed test history) ---
+# --- MYSPEED (speed test history) ---
   myspeed:
     labels:
       - homepage.group=Network

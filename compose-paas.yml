@@ -99,6 +99,8 @@ services:
       - homepage.name=ollama
       - homepage.icon=ollama
       - homepage.description=Local LLM runner
+      - homepage.href=https://ollama.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
     profiles: ["paas"]
     image: ollama/ollama:latest
     container_name: ollama
@@ -175,7 +177,7 @@ services:
       - homepage.group=PaaS
       - homepage.name=minecraft
       - homepage.icon=minecraft
-      - homepage.description=Minecraft server with web UI
+      - homepage.description=Minecraft Java/Bedrock server. Multi-version, easy config via env.
       - homepage.href=https://minecraft.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["paas"]
@@ -200,7 +202,7 @@ services:
       - homepage.name=perplexica
       - homepage.icon=perplexica
       - homepage.description=AI search (Perplexity clone)
-      - homepage.href=https://ai.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.href=https://perplexica.${DUCKDNS_DOMAIN:-localhost}
       - homepage.target=_blank
     profiles: ["paas"]
     image: itzcrazykns/perplexica:main

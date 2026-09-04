@@ -1,0 +1,27 @@
+---
+# Default Glance config for flat-lab.
+# This is mounted into the container at /app/config/glance.yml.
+# Edit freely; the operator can replace it with a richer config
+# once Glance is running (https://github.com/glanceapp/glance/blob/main/docs/configuration.md).
+#
+# Minimal config: a single PAGES section with a welcome widget so the
+# dashboard renders something instead of erroring with
+# `open /app/config/glance.yml: no such file or directory`.
+
+pages:
+  - name: Home
+    columns:
+      - size: small
+        widgets:
+          - type: welcome
+      - size: full
+        widgets:
+          - type: bookmarks
+            title: Bookmarks
+            groups:
+              - title: flat-lab
+                links:
+                  - title: Homepage dashboard
+                    url: https://homepage.${DUCKDNS_DOMAIN:-localhost}
+                  - title: SearXNG
+                    url: https://search.${DUCKDNS_DOMAIN:-localhost}
