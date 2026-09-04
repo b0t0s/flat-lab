@@ -1,0 +1,68 @@
+services:
+
+  # --- HOMEPAGE AUTO-CONFIG (generates widgets.yaml from compose labels) ---
+  homepage-auto-config:
+    profiles: ["dashboard"]
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage-auto-config
+    restart: "no"
+    command:
+      - /app/bin/homepage
+      - config
+      - /app-config/widgets.yaml
+      - /app-config/services.yaml
+      - /app-config/settings.yaml
+      - /app-config/bookmarks.yaml
+      - /app-config/docker.yaml
+    depends_on:
+      homepage:
+        condition: service_completed_successfully
+    volumes:
+      - ../services-data/system/homepage/config:/app-config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # --- HOMEPAGE (dashboard) ---
+  homepage:
+    labels:
+      - homepage.group=Dashboard
+      - homepage.name=homepage
+      - homepage.icon=homepage
+      - homepage.description=Personal dashboard
+      - homepage.href=https://homepage.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["dashboard"]
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    ports:
+      - "${HOMEPAGE_PORT:-3015}:3000"
+    volumes:
+      - ../services-data/system/homepage/config:/app-config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homelab_net
+
+  # --- GLANCE (lightweight dashboard) ---
+  glance:
+    labels:
+      - homepage.group=Dashboard
+      - homepage.name=glance
+      - homepage.icon=glance
+      - homepage.description=Dashboard with widgets
+      - homepage.href=https://glance.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["dashboard"]
+    image: glanceapp/glance:latest
+    container_name: glance
+    restart: unless-stopped
+    ports:
+      - "${GLANCE_PORT:-8088}:8080"
+    volumes:
+      - ../services-data/system/glance/config:/app/config
+    networks:
+      - homelab_net
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true

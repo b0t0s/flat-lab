@@ -1,0 +1,148 @@
+---
+references:
+  - "File: /scripts/compose-tui.sh"
+generationTime: 2026-08-28T13:29:54.035Z
+---
+sequenceDiagram
+    participant Operator
+    participant Script as compose-tui.sh
+    participant Files as Repository and Config Files
+    participant Fzf
+    participant DockerCLI as Docker Compose CLI
+    participant Docker as Docker Engine
+
+    activate Operator
+    activate Script
+    Operator->>Script: Launch with ACTION and optional services
+
+    activate Files
+    activate Fzf
+    activate DockerCLI
+    activate Docker
+
+    alt ACTION is --clear-state
+        Script->>Files: Remove state file
+        Files-->>Script: State cleared
+        Script-->>Operator: Report cleared selection and exit
+
+    else ACTION is a direct Docker action
+        Script->>Fzf: Check whether fzf is installed
+        Fzf-->>Script: Command availability
+
+        Script->>DockerCLI: Inspect external network homelab_net
+        DockerCLI->>Docker: Query network
+        Docker-->>DockerCLI: Network status
+        DockerCLI-->>Script: Inspection result
+
+        alt Network does not exist
+            Script->>DockerCLI: Create homelab_net
+            DockerCLI->>Docker: Create external network
+            Docker-->>DockerCLI: Network created
+            DockerCLI-->>Script: Creation result
+        else Network already exists
+            Note over Script,Docker: Continue without creating the network
+        end
+
+        Script->>Files: Discover compose-*.yml files
+        Files-->>Script: Sorted compose file list
+        Script->>Script: Build -f compose flags
+
+        alt No services supplied
+            loop For each discovered category
+                Script->>Files: List services in category
+                Files-->>Script: Service names
+            end
+            Script->>Script: Assemble all services
+        else Explicit services supplied
+            Script->>Script: Preserve supplied service names
+        end
+
+        Script->>DockerCLI: Run requested action with compose flags
+        DockerCLI->>Docker: Execute action for selected services
+        Docker-->>DockerCLI: Action result
+        DockerCLI-->>Script: Exit status
+        Script-->>Operator: Report Docker result and exit
+
+    else ACTION is menu or empty
+        Script->>Fzf: Verify fzf is installed
+        Fzf-->>Script: Command availability
+
+        Script->>DockerCLI: Inspect homelab_net
+        DockerCLI->>Docker: Query network
+        Docker-->>DockerCLI: Network status
+        DockerCLI-->>Script: Inspection result
+
+        alt Network does not exist
+            Script->>DockerCLI: Create homelab_net
+            DockerCLI->>Docker: Create external network
+            Docker-->>DockerCLI: Network created
+            DockerCLI-->>Script: Creation result
+        else Network already exists
+            Note over Script,Docker: Reuse existing external network
+        end
+
+        Script->>Files: Load saved categories and services
+        Files-->>Script: STATE_CATS and STATE_SERVICES
+
+        loop Menu iterations
+            Script->>Files: Discover categories
+            Files-->>Script: Category names
+
+            loop For each category
+                Script->>Files: Count services under services:
+                Files-->>Script: Service count
+            end
+
+            Script->>Fzf: Present category picker with preselection
+            Fzf-->>Script: Selected categories
+
+            alt No categories selected
+                Script-->>Operator: Report no categories and exit
+            else Categories selected
+                loop For each selected category
+                    Script->>Files: List category services
+                    Files-->>Script: Service names
+                end
+
+                Script->>Fzf: Present service picker with preselection
+                Fzf-->>Script: Selected services
+
+                alt No services selected
+                    Script-->>Operator: Report cancellation and return to categories
+                else Services selected
+                    Script->>DockerCLI: Query service states
+                    DockerCLI->>Docker: docker compose ps
+                    Docker-->>DockerCLI: Service|State rows
+                    DockerCLI-->>Script: Running, stopped, or absent states
+                    Script->>Script: Classify and display service status
+
+                    Script->>Fzf: Present action picker
+                    Fzf-->>Script: Selected action
+
+                    alt No action selected
+                        Script-->>Operator: Report cancellation and return to categories
+                    else Action selected
+                        Script->>Files: Save selected categories and services
+                        Files-->>Script: State persisted
+
+                        Script->>DockerCLI: Run selected action
+                        DockerCLI->>Docker: Execute action for selected services
+                        Docker-->>DockerCLI: Action result
+                        DockerCLI-->>Script: Exit status
+                        Script-->>Operator: Report result and exit
+                    end
+                end
+            end
+        end
+
+    else Unknown ACTION
+        Script->>Script: die with usage error
+        Script-->>Operator: Report unknown action and exit failure
+    end
+
+    deactivate Docker
+    deactivate DockerCLI
+    deactivate Fzf
+    deactivate Files
+    deactivate Script
+    deactivate Operator

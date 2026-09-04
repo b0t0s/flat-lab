@@ -1,0 +1,148 @@
+services:
+
+  # --- ACTUAL BUDGET (envelope budgeting) ---
+  actualbudget:
+    labels:
+      - homepage.group=Finance
+      - homepage.name=actualbudget
+      - homepage.icon=actualbudget
+      - homepage.description=Envelope-budget personal finance
+      - homepage.href=https://budget.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["finance"]
+    image: actualbudget/actual-server:latest
+    container_name: actualbudget
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=5006
+      - ACTUAL_USER_FILE=/data/user-files.json
+      - ACTUAL_PASSWORD=${ACTUALBUDGET_PASSWORD}
+    ports:
+      - "${ACTUALBUDGET_PORT:-5006}:5006"
+    volumes:
+      - ${ACTUALBUDGET_DATA:-../services-data/system/actualbudget}:/data
+    networks:
+      - homelab_net
+
+  # --- WALLOS (subscription tracker) ---
+  wallos:
+    labels:
+      - homepage.group=Finance
+      - homepage.name=wallos
+      - homepage.icon=wallos
+      - homepage.description=Subscription tracker
+      - homepage.href=https://wallos.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["finance"]
+    image: bellamy/wallos:latest
+    container_name: wallos
+    restart: unless-stopped
+    ports:
+      - "${WALLOS_PORT:-8087}:80"
+    volumes:
+      - ${WALLOS_DATA:-../services-data/system/wallos}:/var/www/html/db
+      - ${WALLOS_IMAGES:-../services-data/system/wallos/images}:/var/www/html/images/logos/uploads
+    networks:
+      - homelab_net
+
+  # --- SOLIDTIME (time tracking) ---
+  solidtime:
+    labels:
+      - homepage.group=Finance
+      - homepage.name=solidtime
+      - homepage.icon=solidtime
+      - homepage.description=Time tracking
+      - homepage.href=https://solidtime.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["finance"]
+    image: solidtime/solidtime:latest
+    container_name: solidtime
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=${SOLIDTIME_APP_KEY}
+      - DB_CONNECTION=sqlite
+    ports:
+      - "${SOLIDTIME_PORT:-8088}:80"
+    volumes:
+      - ${SOLIDTIME_DATA:-../services-data/system/solidtime}:/var/www/html/database
+    networks:
+      - homelab_net
+
+  # --- MONICA (personal relationship manager / CRM) ---
+  monica:
+    labels:
+      - homepage.group=Finance
+      - homepage.name=monica
+      - homepage.icon=monica
+      - homepage.description=Personal CRM
+      - homepage.href=https://contacts.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["finance"]
+    image: monicahq/monica:5.0-apache
+    container_name: monica
+    restart: unless-stopped
+    environment:
+      - APP_URL=https://contacts.${DUCKDNS_DOMAIN:-localhost}
+      - DB_CONNECTION=mysql
+      - DB_HOST=monica-db
+      - DB_PORT=3306
+      - DB_DATABASE=monica
+      - DB_USERNAME=monica
+      - DB_PASSWORD=${MONICA_DB_PASSWORD}
+      - APP_KEY=${MONICA_APP_KEY}
+    ports:
+      - "${MONICA_PORT:-8040}:80"
+    depends_on:
+      - monica-db
+    volumes:
+      - ${MONICA_DATA:-../services-data/system/monica}:/var/www/html/storage
+    networks:
+      - homelab_net
+
+  # --- MONICA DB (MariaDB) ---
+  monica-db:
+    profiles: ["finance"]
+    image: mariadb:11
+    container_name: monica-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_DATABASE=monica
+      - MARIADB_USER=monica
+      - MARIADB_PASSWORD=${MONICA_DB_PASSWORD}
+      - MARIADB_RANDOM_ROOT_PASSWORD=true
+    volumes:
+      - ${MONICA_DB_DATA:-../services-data/system/monica/db}:/var/lib/mysql
+    networks:
+      - homelab_net
+
+  # --- KIMAI (time tracking) ---
+  kimai:
+    labels:
+      - homepage.group=Finance
+      - homepage.name=kimai
+      - homepage.icon=kimai
+      - homepage.description=Time tracking + invoicing
+      - homepage.href=https://time.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["finance"]
+    image: ghcr.io/kimai/kimai2:latest
+    container_name: kimai
+    restart: unless-stopped
+    environment:
+      - APP_ENV=prod
+      - TRUSTED_PROXIES=127.0.0.1,REMOTE_ADDR
+      - DATABASE_URL=sqlite:///%kernel.project_dir%/var/data/kimai.sqlite
+    ports:
+      - "${KIMAI_PORT:-8089}:80"
+    volumes:
+      - ${KIMAI_DATA:-../services-data/system/kimai}:/opt/kimai/var
+    networks:
+      - homelab_net
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true

@@ -17,6 +17,7 @@ __pycache__/
 *.egg-info/
 venv/
 .env
+.env*
 
 # Docker / Compose
 docker-compose.override.yml

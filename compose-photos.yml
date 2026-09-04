@@ -1,0 +1,118 @@
+services:
+
+  # --- PIGALLERY2 (photo gallery optimized for Raspberry Pi) ---
+  pigallery2:
+    labels:
+      - homepage.group=Photos
+      - homepage.name=pigallery2
+      - homepage.icon=pigallery2
+      - homepage.description=Photo gallery
+      - homepage.href=https://photos.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["photos"]
+    image: bpatrik/pigallery2:latest
+    container_name: pigallery2
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "${PIGALLERY2_PORT:-8089}:80"
+    volumes:
+      - ${PIGALLERY2_DATA:-../services-data/system/pigallery2/config}:/app/data/config
+      - ${PIGALLERY2_PHOTOS:-../services-data/media/photos}:/app/data/photos:ro
+    networks:
+      - homelab_net
+
+  # --- IMMICH REDIS ---
+  immich-redis:
+    profiles: ["photos"]
+    image: redis:7-alpine
+    container_name: immich-redis
+    restart: unless-stopped
+    volumes:
+      - ${IMMICH_REDIS_DATA:-../services-data/system/immich/redis}:/data
+    networks:
+      - homelab_net
+
+  # --- IMMICH POSTGRES (with VectorChord + pgvector extensions) ---
+  # pgvecto-rs was replaced by VectorChord (pgvecto.rs is deprecated).
+  # The official Immich postgres image bundles both VectorChord + pgvector.
+  immich-postgres:
+    profiles: ["photos"]
+    image: ghcr.io/immich-app/postgres:16-vectorchord0.5.3-pgvector0.8.1
+    container_name: immich-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=immich
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD}
+      - POSTGRES_DB=immich
+    volumes:
+      - ${IMMICH_PG_DATA:-../services-data/system/immich/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- IMMICH TYPESENSE ---
+  immich-typesense:
+    profiles: ["photos"]
+    image: typesense/typesense:27.1
+    container_name: immich-typesense
+    restart: unless-stopped
+    environment:
+      - TYPESENSE_API_KEY=${IMMICH_TYPESENSE_KEY}
+      - TYPESENSE_DATA_DIR=/data
+    volumes:
+      - ${IMMICH_TYPESENSE_DATA:-../services-data/system/immich/typesense}:/data
+    networks:
+      - homelab_net
+
+  # --- IMMICH MACHINE LEARNING (disabled; IMMICH_NO_MACHINE_LEARNING=true on server) ---
+  # Block kept commented for reference. ML model is heavy on Pi 5.
+  # To re-enable: uncomment, set IMMICH_NO_MACHINE_LEARNING=false on immich-server, add immich-machine-learning back to depends_on.
+  # immich-machine-learning:
+  #   profiles: ["photos"]
+  #   image: ghcr.io/immich-app/immich-machine-learning:release
+  #   container_name: immich-machine-learning
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ${IMMICH_MODEL_CACHE:-../services-data/system/immich/model-cache}:/cache
+  #   networks:
+  #     - homelab_net
+
+  # --- IMMICH SERVER ---
+  immich-server:
+    labels:
+      - homepage.group=Photos
+      - homepage.name=immich-server
+      - homepage.icon=immich
+      - homepage.description=Photo library (Immich)
+      - homepage.href=https://immich.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["photos"]
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    restart: unless-stopped
+    environment:
+      - DB_HOSTNAME=immich-postgres
+      - DB_USERNAME=immich
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=immich-redis
+      - TYPESENSE_API_KEY=${IMMICH_TYPESENSE_KEY}
+      - TYPESENSE_HOST=immich-typesense
+      - IMMICH_NO_MACHINE_LEARNING=true
+    depends_on:
+      - immich-redis
+      - immich-postgres
+      - immich-typesense
+    ports:
+      - "${IMMICH_PORT:-2283}:2283"
+    volumes:
+      - ${IMMICH_UPLOAD:-../services-data/media/photos}:/usr/src/app/upload
+      - ${IMMICH_DATA:-../services-data/system/immich/config}:/usr/src/app/config
+    networks:
+      - homelab_net
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true

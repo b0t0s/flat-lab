@@ -4,6 +4,11 @@
         resolvers 1.1.1.1 8.8.8.8
     }
 
+    @mesh host mesh.{$DUCKDNS_DOMAIN}
+    handle @mesh {
+        reverse_proxy ztncui:3443
+    }
+
     @dash host dash.{$DUCKDNS_DOMAIN}
     handle @dash {
         reverse_proxy homepage:3000
@@ -35,6 +40,21 @@
         reverse_proxy adguardhome:81
     }
 
+    @files host files.{$DUCKDNS_DOMAIN}
+    handle @files {
+        reverse_proxy filebrowser-quantum:80
+    }
+
+    @cloud host cloud.{$DUCKDNS_DOMAIN}
+    handle @cloud {
+        reverse_proxy seafile:80
+    }
+
+    @archive host archive.{$DUCKDNS_DOMAIN}
+    handle @archive {
+        reverse_proxy archivebox:8001
+    }
+
     @ai host ai.{$DUCKDNS_DOMAIN}
     handle @ai {
         reverse_proxy open-webui:8080
@@ -50,29 +70,9 @@
         reverse_proxy ghost:2368
     }
 
-    @archive host archive.{$DUCKDNS_DOMAIN}
-    handle @archive {
-        reverse_proxy archivebox:8001
-    }
-
-    @books host books.{$DUCKDNS_DOMAIN}
-    handle @books {
-        reverse_proxy calibre-web:8083
-    }
-
-    @share host share.{$DUCKDNS_DOMAIN}
-    handle @share {
-        reverse_proxy pingvin-share:3000
-    }
-
-    @cloud host cloud.{$DUCKDNS_DOMAIN}
-    handle @cloud {
-        reverse_proxy seafile:80
-    }
-
-    @jellyfin host jellyfin.{$DUCKDNS_DOMAIN}
-    handle @jellyfin {
-        reverse_proxy jellyfin:8096
+    @metube host metube.{$DUCKDNS_DOMAIN}
+    handle @metube {
+        reverse_proxy metube:8081
     }
 
     @music host music.{$DUCKDNS_DOMAIN}
@@ -80,29 +80,9 @@
         reverse_proxy navidrome:4533
     }
 
-    @manga host manga.{$DUCKDNS_DOMAIN}
-    handle @manga {
-        reverse_proxy kavita:5002
-    }
-
-    @nodered host nodered.{$DUCKDNS_DOMAIN}
-    handle @nodered {
-        reverse_proxy nodered:1880
-    }
-
-    @home host home.{$DUCKDNS_DOMAIN}
-    handle @home {
-        reverse_proxy host.docker.internal:8123
-    }
-
-    @monitor host monitor.{$DUCKDNS_DOMAIN}
-    handle @monitor {
-        reverse_proxy changedetection:5000
-    }
-
-    @inventory host inventory.{$DUCKDNS_DOMAIN}
-    handle @inventory {
-        reverse_proxy homebox:7777
+    @media host media.{$DUCKDNS_DOMAIN}
+    handle @media {
+        reverse_proxy jellyfin:8096
     }
 
     @radarr host radarr.{$DUCKDNS_DOMAIN}
@@ -115,8 +95,18 @@
         reverse_proxy sonarr:8989
     }
 
-    @media host media.{$DUCKDNS_DOMAIN}
-    handle @media {
+    @books host books.{$DUCKDNS_DOMAIN}
+    handle @books {
+        reverse_proxy calibre-web:8083
+    }
+
+    @manga host manga.{$DUCKDNS_DOMAIN}
+    handle @manga {
+        reverse_proxy kavita:5002
+    }
+
+    @indexer host indexer.{$DUCKDNS_DOMAIN}
+    handle @indexer {
         reverse_proxy prowlarr:9696
     }
 
@@ -125,14 +115,24 @@
         reverse_proxy qbittorrent:8080
     }
 
-    @metube host metube.{$DUCKDNS_DOMAIN}
-    handle @metube {
-        reverse_proxy metube:8081
+    @share host share.{$DUCKDNS_DOMAIN}
+    handle @share {
+        reverse_proxy pingvin-share:3000
     }
 
-    @tools host tools.{$DUCKDNS_DOMAIN}
-    handle @tools {
-        reverse_proxy it-tools:80
+    @home host home.{$DUCKDNS_DOMAIN}
+    handle @home {
+        reverse_proxy host.docker.internal:8123
+    }
+
+    @inventory host inventory.{$DUCKDNS_DOMAIN}
+    handle @inventory {
+        reverse_proxy homebox:7777
+    }
+
+    @nodered host nodered.{$DUCKDNS_DOMAIN}
+    handle @nodered {
+        reverse_proxy nodered:1880
     }
 
     @git host git.{$DUCKDNS_DOMAIN}
@@ -143,6 +143,183 @@
         reverse_proxy onedev:6610 {
             header_up Host {upstream_hostport}
             header_up X-Forwarded-Host {host}
+        }
+    }
+
+    @tools host tools.{$DUCKDNS_DOMAIN}
+    handle @tools {
+        reverse_proxy it-tools:80
+    }
+
+    @convert host convert.{$DUCKDNS_DOMAIN}
+    handle @convert {
+        reverse_proxy convertx:3000
+    }
+
+    @glance host glance.{$DUCKDNS_DOMAIN}
+    handle @glance {
+        reverse_proxy glance:8080
+    }
+
+    @gallery host gallery.{$DUCKDNS_DOMAIN}
+    handle @gallery {
+        reverse_proxy pigallery2:80
+    }
+
+    @speed host speed.{$DUCKDNS_DOMAIN}
+    handle @speed {
+        reverse_proxy myspeed:5216
+    }
+
+    @wol host wol.{$DUCKDNS_DOMAIN}
+    handle @wol {
+        reverse_proxy upsnap:8090
+    }
+
+    @whois host whois.{$DUCKDNS_DOMAIN}
+    handle @whois {
+        reverse_proxy whois:8043
+    }
+
+    @code host code.{$DUCKDNS_DOMAIN}
+    handle @code {
+        reverse_proxy code-server:8443
+    }
+
+    @control host control.{$DUCKDNS_DOMAIN}
+    handle @control {
+        reverse_proxy olivetin:1337
+    }
+
+    @budget host budget.{$DUCKDNS_DOMAIN}
+    handle @budget {
+        reverse_proxy actualbudget:5006
+    }
+
+    @subscriptions host subs.{$DUCKDNS_DOMAIN}
+    handle @subscriptions {
+        reverse_proxy wallos:80
+    }
+
+    @time host time.{$DUCKDNS_DOMAIN}
+    handle @time {
+        reverse_proxy solidtime:80
+    }
+
+    @tasks host tasks.{$DUCKDNS_DOMAIN}
+    handle @tasks {
+        reverse_proxy super-productivity:5050
+    }
+
+    @recipes host recipes.{$DUCKDNS_DOMAIN}
+    handle @recipes {
+        reverse_proxy managemeals:8089
+    }
+
+    @twofa host 2fa.{$DUCKDNS_DOMAIN}
+    handle @twofa {
+        reverse_proxy twofauth:8000
+    }
+
+    @faved host faved.{$DUCKDNS_DOMAIN}
+    handle @faved {
+        reverse_proxy faved:80
+    }
+
+    @travel host travel.{$DUCKDNS_DOMAIN}
+    handle @travel {
+        reverse_proxy adventurelog:8000
+    }
+
+    @locations host locations.{$DUCKDNS_DOMAIN}
+    handle @locations {
+        reverse_proxy dawarich:3000
+    }
+
+    @shhh host shhh.{$DUCKDNS_DOMAIN}
+    handle @shhh {
+        reverse_proxy shhh:5000
+    }
+
+    @hemmelig host hemmelig.{$DUCKDNS_DOMAIN}
+    handle @hemmelig {
+        reverse_proxy hemmelig:3000
+    }
+
+    @gist host gist.{$DUCKDNS_DOMAIN}
+    handle @gist {
+        reverse_proxy opengist:6157
+    }
+
+    @gramps host gramps.{$DUCKDNS_DOMAIN}
+    handle @gramps {
+        reverse_proxy gramps-web:5000
+    }
+
+    @fitness host fitness.{$DUCKDNS_DOMAIN}
+    handle @fitness {
+        reverse_proxy wger:3000
+    }
+
+    @emr host emr.{$DUCKDNS_DOMAIN}
+    handle @emr {
+        reverse_proxy openemr:443 {
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+
+    @chat host chat.{$DUCKDNS_DOMAIN}
+    handle @chat {
+        reverse_proxy snikket-portal:80
+    }
+
+    @xmpp host xmpp.{$DUCKDNS_DOMAIN}
+    handle @xmpp {
+        reverse_proxy conversejs:8080
+    }
+
+    @movim host movim.{$DUCKDNS_DOMAIN}
+    handle @movim {
+        reverse_proxy movim:80
+    }
+
+    @immich host photos.{$DUCKDNS_DOMAIN}
+    handle @immich {
+        reverse_proxy immich-server:2283
+    }
+
+    @paperless host paperless.{$DUCKDNS_DOMAIN}
+    handle @paperless {
+        reverse_proxy paperless-ngx:8000
+    }
+
+    @beszel host beszel.{$DUCKDNS_DOMAIN}
+    handle @beszel {
+        reverse_proxy beszel-hub:8090
+    }
+
+    @ntfy host ntfy.{$DUCKDNS_DOMAIN}
+    handle @ntfy {
+        reverse_proxy ntfy:80
+    }
+
+    @links host links.{$DUCKDNS_DOMAIN}
+    handle @links {
+        reverse_proxy linkwarden:3000
+    }
+
+    @pdf host pdf.{$DUCKDNS_DOMAIN}
+    handle @pdf {
+        reverse_proxy stirling-pdf:8080
+    }
+
+    @search host search.{$DUCKDNS_DOMAIN}
+    handle @search {
+        reverse_proxy searxng:8080 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
         }
     }
 
@@ -168,6 +345,11 @@
             header Content-Security-Policy "default-src 'self'; object-src 'none'; script-src 'self' 'unsafe-eval'; img-src 'self' data:; style-src 'self' data: 'unsafe-inline'"
             reverse_proxy phatcrack-frontend:80
         }
+    }
+
+    @monitor host monitor.{$DUCKDNS_DOMAIN}
+    handle @monitor {
+        reverse_proxy changedetection:5000
     }
 
     # Fallback

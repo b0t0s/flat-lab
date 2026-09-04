@@ -1,0 +1,500 @@
+services:
+
+  # --- MEMOS (notes/microblog) ---
+  memos:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=memos
+      - homepage.icon=memos
+      - homepage.description=Notes + microblog
+      - homepage.href=https://memos.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: neosmemo/memos:latest
+    container_name: memos
+    restart: unless-stopped
+    ports:
+      - "${MEMOS_HOST_PORT:-5230}:5230"
+    volumes:
+      - ${MEMOS_DATA:-../services-data/system/memos}:/var/opt/memos
+    networks:
+      - homelab_net
+
+  # --- GHOST DB ---
+  ghost-db:
+    profiles: ["knowledge"]
+    image: mysql:8.0
+    container_name: ghost-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${GHOST_DB_ROOT_PASS}
+      - MYSQL_DATABASE=ghost
+      - MYSQL_USER=ghost
+      - MYSQL_PASSWORD=${GHOST_DB_PASS}
+    volumes:
+      - ${GHOST_DB_DATA:-../services-data/system/ghost-db}:/var/lib/mysql
+    networks:
+      - homelab_net
+
+  # --- GHOST (blog/CMS) ---
+  ghost:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=ghost
+      - homepage.icon=ghost
+      - homepage.description=Blog / CMS
+      - homepage.href=https://blog.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: ghost:5
+    container_name: ghost
+    restart: unless-stopped
+    environment:
+      - database__client=mysql
+      - database__connection__host=ghost-db
+      - database__connection__user=ghost
+      - database__connection__password=${GHOST_DB_PASS}
+      - database__connection__database=ghost
+      - url=http://${DUCKDNS_DOMAIN:-localhost}
+    depends_on:
+      - ghost-db
+    ports:
+      - "${GHOST_HOST_PORT:-2368}:2368"
+    volumes:
+      - ${GHOST_DATA:-../services-data/system/ghost}:/var/lib/ghost/content
+    networks:
+      - homelab_net
+
+  # --- ARCHIVEBOX (web archiver) ---
+  archivebox:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=archivebox
+      - homepage.icon=archivebox
+      - homepage.description=Web archiver
+      - homepage.href=https://archive.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: archivebox/archivebox:latest
+    container_name: archivebox
+    restart: unless-stopped
+    ports:
+      - "${ARCHIVEBOX_HOST_PORT:-8001}:8000"
+    environment:
+      - ALLOWED_HOSTS=*
+      - ADMIN_USERNAME=${ARCHIVEBOX_ADMIN_USER}
+      - ADMIN_PASSWORD=${ARCHIVEBOX_ADMIN_PASS}
+    volumes:
+      - ${ARCHIVEBOX_DATA:-../services-data/system/archivebox}:/data
+    networks:
+      - homelab_net
+
+  # --- CHANGEDETECTION (web page change monitor) ---
+  changedetection:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=changedetection
+      - homepage.icon=changedetection
+      - homepage.description=Page change monitor
+      - homepage.href=https://changedetection.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: dgtlmoon/changedetection.io:latest
+    container_name: changedetection
+    restart: unless-stopped
+    ports:
+      - "${CHANGEDETECTION_HOST_PORT:-5000}:5000"
+    volumes:
+      - ${CHANGEDETECTION_DATA:-../services-data/system/changedetection}:/datastore
+    networks:
+      - homelab_net
+
+  # --- DAWARICH (location timeline) ---
+  dawarich:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=dawarich
+      - homepage.icon=dawarich
+      - homepage.description=Location timeline
+      - homepage.href=https://dawarich.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: freikin/dawarich:latest
+    container_name: dawarich
+    restart: unless-stopped
+    environment:
+      - RAILS_ENV=production
+      - APPLICATION_HOSTS=*
+    ports:
+      - "${DAWARICH_PORT:-3030}:3000"
+    volumes:
+      - ${DAWARICH_DATA:-../services-data/system/dawarich}:/usr/src/app/storage
+    networks:
+      - homelab_net
+
+  # --- ADVENTURELOG (travel journal) ---
+  adventurelog:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=adventurelog
+      - homepage.icon=adventurelog
+      - homepage.description=Travel journal
+      - homepage.href=https://trips.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: seanmorley15/adventurelog:latest
+    container_name: adventurelog-backend
+    restart: unless-stopped
+    environment:
+      - DJANGO_SETTINGS_MODULE=adventurelog.settings
+      - SECRET_KEY=${ADVENTURELOG_SECRET}
+    ports:
+      - "${ADVENTURELOG_PORT:-8010}:8000"
+    volumes:
+      - ${ADVENTURELOG_DATA:-../services-data/system/adventurelog}:/app/backend/data
+    networks:
+      - homelab_net
+
+  # --- FAVED (bookmarks) ---
+  faved:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=faved
+      - homepage.icon=faved
+      - homepage.description=Bookmark manager
+      - homepage.href=https://faved.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: denho/faved:latest
+    container_name: faved
+    restart: unless-stopped
+    environment:
+      - DATA_DIR=/data
+      - SECRET_KEY=${FAVED_SECRET}
+    ports:
+      - "${FAVED_PORT:-4040}:80"
+    volumes:
+      - ${FAVED_DATA:-../services-data/system/faved}:/data
+    networks:
+      - homelab_net
+
+  # --- IT-TOOLS (developer utilities) ---
+  it-tools:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=it-tools
+      - homepage.icon=it-tools
+      - homepage.description=Developer toolbox
+      - homepage.href=https://tools.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    ports:
+      - "${ITTOOLS_HOST_PORT:-8082}:80"
+    networks:
+      - homelab_net
+
+  # --- CONVERTX (file converter) ---
+  convertx:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=convertx
+      - homepage.icon=convertx
+      - homepage.description=File converter
+      - homepage.href=https://convert.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: ghcr.io/c4illin/convertx:latest
+    container_name: convertx
+    restart: unless-stopped
+    environment:
+      - JWT_SECRET=${CONVERTX_JWT_SECRET}
+    ports:
+      - "${CONVERTX_HOST_PORT:-8086}:3000"
+    volumes:
+      - ${CONVERTX_DATA:-../services-data/system/convertx}:/app/data
+    networks:
+      - homelab_net
+
+  # --- PAPERLESS REDIS ---
+  paperless-redis:
+    profiles: ["knowledge"]
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    volumes:
+      - ${PAPERLESS_REDIS_DATA:-../services-data/system/paperless/redis}:/data
+    networks:
+      - homelab_net
+
+  # --- PAPERLESS DB ---
+  paperless-db:
+    profiles: ["knowledge"]
+    image: postgres:16-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD}
+    volumes:
+      - ${PAPERLESS_DB_DATA:-../services-data/system/paperless/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- PAPERLESS-NGX (document OCR + management) ---
+  paperless-ngx:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=paperless-ngx
+      - homepage.icon=paperless
+      - homepage.description=Document management + OCR
+      - homepage.href=https://paperless.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: ghcr.io/paperlessngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    restart: unless-stopped
+    environment:
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_DBENGINE=postgresql
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD}
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET}
+      - PAPERLESS_TIME_ZONE=${TZ:-Europe/Kyiv}
+      - PAPERLESS_URL=https://paperless.${DUCKDNS_DOMAIN:-localhost}
+      - USERMAP_UID=${PUID:-1000}
+      - USERMAP_GID=${PGID:-1000}
+    depends_on:
+      - paperless-redis
+      - paperless-db
+    ports:
+      - "${PAPERLESS_PORT:-8002}:8000"
+    volumes:
+      - ${PAPERLESS_DATA:-../services-data/system/paperless/data}:/usr/src/paperless/data
+      - ${PAPERLESS_MEDIA:-../services-data/system/paperless/media}:/usr/src/paperless/media
+      - ${PAPERLESS_EXPORT:-../services-data/system/paperless/export}:/usr/src/paperless/export
+      - ${PAPERLESS_CONSUME:-../services-data/system/paperless/consume}:/usr/src/paperless/consume
+    networks:
+      - homelab_net
+
+  # --- MINIFLUX DB (postgres) ---
+  miniflux-db:
+    profiles: ["knowledge"]
+    image: postgres:16-alpine
+    container_name: miniflux-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=miniflux
+      - POSTGRES_USER=miniflux
+      - POSTGRES_PASSWORD=${MINIFLUX_DB_PASSWORD}
+    volumes:
+      - ${MINIFLUX_DB_DATA:-../services-data/system/miniflux/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- MINIFLUX (minimalist feed reader) ---
+  miniflux:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=miniflux
+      - homepage.icon=miniflux
+      - homepage.description=Minimalist feed reader
+      - homepage.href=https://rss.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    restart: unless-stopped
+    depends_on:
+      - miniflux-db
+    environment:
+      - DATABASE_URL=postgres://miniflux:${MINIFLUX_DB_PASSWORD}@miniflux-db:5432/miniflux?sslmode=disable
+      - RUN_MIGRATIONS=1
+      - LISTEN_ADDR=:8080
+      - BASE_URL=https://rss.${DUCKDNS_DOMAIN:-localhost}
+      - ADMIN_USERNAME=${MINIFLUX_ADMIN_USER}
+      - ADMIN_PASSWORD=${MINIFLUX_ADMIN_PASSWORD}
+    ports:
+      - "${MINIFLUX_PORT:-8051}:8080"
+    networks:
+      - homelab_net
+
+  # --- OUTLINE (team wiki) ---
+  outline:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=outline
+      - homepage.icon=outline
+      - homepage.description=Team wiki / docs
+      - homepage.href=https://docs.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: outlinewiki/outline:latest
+    container_name: outline
+    restart: unless-stopped
+    depends_on:
+      - outline-db
+      - outline-redis
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://outline:${OUTLINE_DB_PASSWORD}@outline-db:5432/outline
+      - REDIS_URL=redis://outline-redis:6379
+      - URL=https://docs.${DUCKDNS_DOMAIN:-localhost}
+      - PORT=3000
+      - SECRET_KEY=${OUTLINE_SECRET}
+      - UTILS_SECRET=${OUTLINE_UTILS_SECRET}
+      - FILE_STORAGE=local
+      - FILE_STORAGE_LOCAL_ROOT_DIR=/var/lib/outline/data
+    ports:
+      - "${OUTLINE_PORT:-8060}:3000"
+    volumes:
+      - ${OUTLINE_DATA:-../services-data/system/outline}:/var/lib/outline/data
+    networks:
+      - homelab_net
+
+  # --- OUTLINE DB (postgres) ---
+  outline-db:
+    profiles: ["knowledge"]
+    image: postgres:16-alpine
+    container_name: outline-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=outline
+      - POSTGRES_USER=outline
+      - POSTGRES_PASSWORD=${OUTLINE_DB_PASSWORD}
+    volumes:
+      - ${OUTLINE_DB_DATA:-../services-data/system/outline/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- OUTLINE REDIS ---
+  outline-redis:
+    profiles: ["knowledge"]
+    image: redis:7-alpine
+    container_name: outline-redis
+    restart: unless-stopped
+    networks:
+      - homelab_net
+
+  # --- BOOKSTACK (wiki/manual platform) ---
+  bookstack:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=bookstack
+      - homepage.icon=bookstack
+      - homepage.description=Wiki + manual platform
+      - homepage.href=https://wiki.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: ghcr.io/linuxserver/bookstack:latest
+    container_name: bookstack
+    restart: unless-stopped
+    depends_on:
+      - bookstack-db
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Kyiv}
+      - APP_URL=https://wiki.${DUCKDNS_DOMAIN:-localhost}
+      - DB_HOST=bookstack-db
+      - DB_PORT=3306
+      - DB_DATABASE=bookstack
+      - DB_USER=bookstack
+      - DB_PASS=${BOOKSTACK_DB_PASSWORD}
+    ports:
+      - "${BOOKSTACK_PORT:-6875}:80"
+    volumes:
+      - ${BOOKSTACK_DATA:-../services-data/system/bookstack}:/config
+    networks:
+      - homelab_net
+
+  # --- BOOKSTACK DB (MariaDB) ---
+  bookstack-db:
+    profiles: ["knowledge"]
+    image: mariadb:11
+    container_name: bookstack-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_DATABASE=bookstack
+      - MARIADB_USER=bookstack
+      - MARIADB_PASSWORD=${BOOKSTACK_DB_PASSWORD}
+      - MARIADB_RANDOM_ROOT_PASSWORD=true
+    volumes:
+      - ${BOOKSTACK_DB_DATA:-../services-data/system/bookstack/db}:/var/lib/mysql
+    networks:
+      - homelab_net
+
+  # --- EXCALIDRAW (virtual whiteboard, hand-drawn diagrams) ---
+  # Single-container React app. Stateless - data lives in browser localStorage.
+  excalidraw:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=excalidraw
+      - homepage.icon=excalidraw
+      - homepage.description=Hand-drawn diagram whiteboard
+      - homepage.href=https://draw.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    restart: unless-stopped
+    ports:
+      - "${EXCALIDRAW_PORT:-3502}:80"
+    networks:
+      - homelab_net
+
+  # --- SIYUAN NOTE (privacy-first personal knowledge management) ---
+  # Single Go binary. Stores blocks locally; sync via cloud S3 / WebDAV.
+  siyuan:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=siyuan
+      - homepage.icon=siyuan
+      - homepage.description=Privacy-first note-taking
+      - homepage.href=https://siyuan.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: b3log/siyuan:latest
+    container_name: siyuan
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Kyiv}
+    ports:
+      - "${SIYUAN_PORT:-6806}:6806"
+    volumes:
+      - ${SIYUAN_DATA:-../services-data/system/siyuan}:/siyuan/workspace
+    networks:
+      - homelab_net
+
+  # --- RSSHUB (RSS feed generator for almost anything) ---
+  # Pairs with miniflux/freshrss as upstream feed source.
+  rsshub:
+    labels:
+      - homepage.group=Knowledge
+      - homepage.name=rsshub
+      - homepage.icon=rsshub
+      - homepage.description=RSS feed generator
+      - homepage.href=https://rss.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["knowledge"]
+    image: diygod/rsshub:latest
+    container_name: rsshub
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "${RSSHUB_PORT:-3503}:1200"
+    networks:
+      - homelab_net
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true

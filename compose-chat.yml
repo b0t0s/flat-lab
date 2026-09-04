@@ -1,0 +1,303 @@
+services:
+
+  # --- SNIKKET PROXY (web reverse proxy for Snikket web clients) ---
+  snikket-proxy:
+    profiles: ["chat"]
+    container_name: snikket-proxy
+    image: snikket/snikket-web-proxy:latest
+    network_mode: host
+    env_file:
+      - ${SNIKKET_CONF_PATH:-./snikket.conf}
+    volumes:
+      - ${SNIKKET_DATA_PATH:-../services-data/system/snikket}:/snikket
+      - snikket_acme:/var/www/html/.well-known/acme-challenge
+    restart: unless-stopped
+
+  # --- SNIKKET CERT MANAGER (Let's Encrypt) ---
+  snikket-certs:
+    profiles: ["chat"]
+    container_name: snikket-certs
+    image: snikket/snikket-cert-manager:latest
+    network_mode: host
+    env_file:
+      - ${SNIKKET_CONF_PATH:-./snikket.conf}
+    volumes:
+      - ${SNIKKET_DATA_PATH:-../services-data/system/snikket}:/snikket
+      - snikket_acme:/var/www/.well-known/acme-challenge
+    restart: unless-stopped
+
+  # --- SNIKKET PORTAL (invitation + account management) ---
+  snikket-portal:
+    profiles: ["chat"]
+    container_name: snikket-portal
+    image: snikket/snikket-web-portal:latest
+    network_mode: host
+    env_file:
+      - ${SNIKKET_CONF_PATH:-./snikket.conf}
+    restart: unless-stopped
+
+  # --- SNIKKET SERVER (XMPP server + clients) ---
+  snikket-server:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=snikket-server
+      - homepage.icon=xmpp
+      - homepage.description=XMPP chat server (Snikket)
+      - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    container_name: snikket-server
+    image: snikket/snikket-server:latest
+    network_mode: host
+    env_file:
+      - ${SNIKKET_CONF_PATH:-./snikket.conf}
+    volumes:
+      - ${SNIKKET_DATA_PATH:-../services-data/system/snikket}:/snikket
+    restart: unless-stopped
+
+  # --- CONVERSE.JS (XMPP web client, alt entrypoint) ---
+  conversejs:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=conversejs
+      - homepage.icon=conversejs
+      - homepage.description=XMPP web client
+      - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: conversejs/conversejs:latest
+    container_name: conversejs
+    restart: unless-stopped
+    ports:
+      - "${CONVERSEJS_PORT:-8093}:8080"
+    networks:
+      - homelab_net
+
+  # --- MOVIM (XMPP social network) ---
+  movim-db:
+    profiles: ["chat"]
+    image: postgres:16-alpine
+    container_name: movim-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=movim
+      - POSTGRES_USER=movim
+      - POSTGRES_PASSWORD=${MOVIM_DB_PASSWORD}
+    volumes:
+      - ${MOVIM_DB_DATA:-../services-data/system/movim-db}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  movim:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=movim
+      - homepage.icon=movim
+      - homepage.description=XMPP social network
+      - homepage.href=https://movim.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: movim/movim:latest
+    container_name: movim
+    restart: unless-stopped
+    environment:
+      - MOVIM_HOST=movim.${DUCKDNS_DOMAIN:-localhost}
+      - MOVIM_PORT=80
+      - DB_HOST=movim-db
+      - DB_NAME=movim
+      - DB_USER=movim
+      - DB_PASSWORD=${MOVIM_DB_PASSWORD}
+    depends_on:
+      - movim-db
+    ports:
+      - "${MOVIM_PORT:-8082}:80"
+    networks:
+      - homelab_net
+
+  # --- LIVEKIT REDIS ---
+  livekit-redis:
+    profiles: ["chat"]
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+    networks:
+      - homelab_net
+
+  # --- LIVEKIT SERVER (WebRTC SFU) ---
+  livekit:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=livekit
+      - homepage.icon=livekit
+      - homepage.description=WebRTC SFU (audio/video)
+      - homepage.href=https://meet.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    depends_on:
+      - livekit-redis
+    ports:
+      - "${LIVEKIT_PORT:-7880}:7880"
+      - "${LIVEKIT_TCP_PORT:-7881}:7881"
+      - "${LIVEKIT_TURN_PORT:-3478}:3478/udp"
+    volumes:
+      - ${LIVEKIT_CONFIG:-../services-data/system/livekit/livekit.yaml}:/etc/livekit.yaml
+    networks:
+      - homelab_net
+
+  # --- ERGOCHAT (modern IRC server) ---
+  ergochat:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=ergochat
+      - homepage.icon=ergochat
+      - homepage.description=IRC server with web client
+      - homepage.href=https://irc.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: ghcr.io/ergochat/ergo:latest
+    container_name: ergochat
+    restart: unless-stopped
+    ports:
+      - "${ERGOCHAT_PORT:-6667}:6667"
+      - "${ERGOCHAT_WEB_PORT:-8090}:8080"
+    networks:
+      - homelab_net
+
+  # --- LEMMY POSTGRES ---
+  lemmy-db:
+    profiles: ["chat"]
+    image: postgres:16-alpine
+    container_name: lemmy-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=lemmy
+      - POSTGRES_USER=lemmy
+      - POSTGRES_PASSWORD=${LEMMY_DB_PASSWORD}
+    volumes:
+      - ${LEMMY_DB_DATA:-../services-data/system/lemmy/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- LEMMY (federated Reddit alternative) ---
+  lemmy:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=lemmy
+      - homepage.icon=lemmy
+      - homepage.description=Federated Reddit alternative
+      - homepage.href=https://forum.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: lemmyvr/lemmy:latest
+    container_name: lemmy
+    restart: unless-stopped
+    depends_on:
+      - lemmy-db
+    environment:
+      - LEMMY_DATABASE_URL=postgres://lemmy:${LEMMY_DB_PASSWORD}@lemmy-db:5432/lemmy
+      - LEMMY_HOSTNAME=forum.${DUCKDNS_DOMAIN:-localhost}
+      - LEMMY_PORT=8536
+    ports:
+      - "${LEMMY_PORT:-8536}:8536"
+    volumes:
+      - ${LEMMY_DATA:-../services-data/system/lemmy}:/app/config
+    networks:
+      - homelab_net
+
+  # --- SYNAPSE POSTGRES (Matrix homeserver DB) ---
+  synapse-db:
+    profiles: ["chat"]
+    image: postgres:16-alpine
+    container_name: synapse-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=synapse
+      - POSTGRES_USER=synapse
+      - POSTGRES_PASSWORD=${SYNAPSE_DB_PASSWORD}
+    volumes:
+      - ${SYNAPSE_DB_DATA:-../services-data/system/synapse/postgres}:/var/lib/postgresql/data
+    networks:
+      - homelab_net
+
+  # --- SYNAPSE INIT (one-shot: generates homeserver.yaml) ---
+  synapse-init:
+    profiles: ["chat"]
+    image: matrixdotorg/synapse:latest
+    container_name: synapse-init
+    restart: "no"
+    depends_on:
+      - synapse-db
+    environment:
+      - SYNAPSE_SERVER_NAME=${DUCKDNS_DOMAIN:-localhost}
+      - SYNAPSE_REPORT_STATS=no
+    volumes:
+      - ${SYNAPSE_DATA:-../services-data/system/synapse}:/data
+    networks:
+      - homelab_net
+
+  # --- SYNAPSE (Matrix homeserver) ---
+  synapse:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=synapse
+      - homepage.icon=synapse
+      - homepage.description=Matrix homeserver
+      - homepage.href=https://matrix.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: matrixdotorg/synapse:latest
+    container_name: synapse
+    restart: unless-stopped
+    depends_on:
+      synapse-init:
+        condition: service_completed_successfully
+      synapse-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8008/_matrix/client/versions"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - SYNAPSE_SERVER_NAME=${DUCKDNS_DOMAIN:-localhost}
+      - SYNAPSE_REPORT_STATS=no
+    ports:
+      - "${SYNAPSE_PORT:-3506}:8008"
+      - "${SYNAPSE_FED_PORT:-8448}:8448"
+    volumes:
+      - ${SYNAPSE_DATA:-../services-data/system/synapse}:/data
+    networks:
+      - homelab_net
+
+  # --- ELEMENT WEB (Matrix web client) ---
+  element-web:
+    labels:
+      - homepage.group=Chat
+      - homepage.name=element
+      - homepage.icon=element
+      - homepage.description=Matrix web client
+      - homepage.href=https://chat.${DUCKDNS_DOMAIN:-localhost}
+      - homepage.target=_blank
+    profiles: ["chat"]
+    image: vectorim/element-web:latest
+    container_name: element-web
+    restart: unless-stopped
+    environment:
+      - ELEMENT_SERVER_NAME=${DUCKDNS_DOMAIN:-localhost}
+    ports:
+      - "${ELEMENT_PORT:-3507}:80"
+    networks:
+      - homelab_net
+
+volumes:
+  snikket_acme:
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true
