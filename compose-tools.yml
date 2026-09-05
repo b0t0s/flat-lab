@@ -1,9 +1,47 @@
 services:
 
+  # --- EXCALIDRAW ---
+  excalidraw:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Excalidraw
+    - homepage.icon=mdi-draw
+    - homepage.description=Hand-drawn diagram whiteboard
+    - homepage.href=https://draw.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["tools"]
+    image: excalidraw/excalidraw:latest
+    container_name: excalidraw
+    restart: unless-stopped
+    ports:
+    - "${EXCALIDRAW_PORT:-3502}:80"
+    networks:
+    - homelab_net
+
+  # --- PINGVIN-SHARE ---
+  pingvin-share:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Pingvin Share
+    - homepage.icon=mdi-share-variant
+    - homepage.description=File share (WeTransfer alt)
+    - homepage.href=https://share.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["tools"]
+    image: stonith404/pingvin-share:latest
+    container_name: pingvin-share
+    restart: unless-stopped
+    environment:
+    - TZ=${TZ:-Europe/Kyiv}
+    ports:
+    - "${PINGVIN_HOST_PORT:-3010}:3000"
+    volumes:
+    - ${PINGVIN_DATA:-../services-data/system/pingvin-share}:/app/backend/pingvin-share-data
+    networks:
+    - homelab_net
+
   # --- STIRLING-PDF (PDF toolkit, 50+ operations) ---
   stirling-pdf:
     labels:
-    - homepage.group=Development
+    - homepage.group=Productivity
     - homepage.name=Stirling PDF
     - homepage.icon=mdi-file-pdf-box
     - homepage.description=PDF tools (merge/split/convert)
@@ -44,7 +82,7 @@ services:
   # --- SEARXNG (metasearch engine) ---
   searxng:
     labels:
-    - homepage.group=Infrastructure
+    - homepage.group=Productivity
     - homepage.name=SearXNG
     - homepage.icon=mdi-magnify
     - homepage.description=Metasearch engine

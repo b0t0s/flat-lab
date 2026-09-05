@@ -3,11 +3,7 @@ services:
   # --- HOMEPAGE (dashboard, uses docker socket auto-discovery) ---
   homepage:
     labels:
-    - homepage.group=Dashboard
-    - homepage.name=Homepage
-    - homepage.icon=mdi-view-dashboard
-    - homepage.description=Personal dashboard
-    - homepage.href=https://dash.${DUCKDNS_DOMAIN:-localhost}
+    - glance.hide=true
     profiles: ["dashboard"]
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage

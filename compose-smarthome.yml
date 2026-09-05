@@ -17,6 +17,7 @@ services:
     volumes:
     - ${HOME_ASSISTANT_DATA:-../services-data/system/home-assistant}:/config
     - /etc/localtime:/etc/localtime:ro
+    - /run/dbus:/run/dbus:ro
     environment:
     - TZ=${TZ:-Europe/Kyiv}
 
@@ -95,6 +96,134 @@ services:
     depends_on:
       nodered-init:
         condition: service_completed_successfully
+
+  # --- SEAFILE ---
+  seafile:
+    labels:
+    - homepage.group=Home & Automation
+    - homepage.name=Seafile
+    - homepage.icon=mdi-cloud
+    - homepage.description=File sync + share
+    - homepage.href=https://cloud.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["smarthome"]
+    image: seafileltd/seafile-mc:latest
+    container_name: seafile
+    restart: unless-stopped
+    ports:
+      - "${SEAFILE_HOST_PORT:-8084}:80"
+    environment:
+      - DEBUG=True
+      - DB_HOST=seafile-db
+      - DB_ROOT_PASSWD=${SEAFILE_DB_ROOT_PASS:-db_dev_password}
+      - TIME_ZONE=Europe/Kyiv
+      - SEAFILE_ADMIN_EMAIL=${SEAFILE_ADMIN_EMAIL:-admin@example.com}
+      - SEAFILE_ADMIN_PASSWORD=${SEAFILE_ADMIN_PASS:-adminpassword}
+      - SEAFILE_SERVER_LETSENCRYPT=false
+    volumes:
+    - ${SEAFILE_DATA:-../services-data/system/seafile}:/shared
+    depends_on:
+      - seafile-db
+      - seafile-memcached
+    networks:
+      - homelab_net
+
+  seafile-db:
+    profiles: ["smarthome"]
+    image: mariadb:11.8.8
+    container_name: seafile-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${SEAFILE_DB_ROOT_PASS:-db_dev_password}
+      - MYSQL_LOG_CONSOLE=true
+      - DEBUG=True
+    volumes:
+      - ${SEAFILE_DB_DATA:-../services-data/system/seafile-db}:/var/lib/mysql
+    networks:
+      - homelab_net
+
+  seafile-memcached:
+    profiles: ["smarthome"]
+    image: memcached:1.6-alpine
+    container_name: seafile-memcached
+    restart: unless-stopped
+    entrypoint: memcached -m 256
+    networks:
+      - homelab_net
+
+  seafile-auto-config:
+    profiles: ["smarthome"]
+    image: docker:cli
+    container_name: seafile-auto-config
+    restart: "no"
+    depends_on:
+      - seafile
+    volumes:
+      - ${SEAFILE_DATA_PATH:-../services-data/seafile/data}:/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: |
+      /bin/sh -c "
+        echo 'Waiting for Seafile to initialize config files...'
+        while [ ! -f /shared/seafile/conf/seahub_settings.py ]; do sleep 3; done
+        sleep 5
+        if ! grep -q 'CSRF_TRUSTED_ORIGINS' /shared/seafile/conf/seahub_settings.py; then
+          echo 'Injecting HTTPS and CSRF settings...'
+          echo \"\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"SERVICE_URL = 'https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}'\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"FILE_SERVER_ROOT = 'https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}/seafhttp'\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"CSRF_TRUSTED_ORIGINS = ['https://cloud.${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}']\" >> /shared/seafile/conf/seahub_settings.py
+          echo \"SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')\" >> /shared/seafile/conf/seahub_settings.py
+          echo 'Restarting Seafile container to apply changes...'
+          docker restart seafile
+        else
+          echo 'Custom configurations are already present. Exiting.'
+        fi
+      "
+
+  # --- MANAGEMEALS ---
+  managemeals:
+    labels:
+    - homepage.group=Home & Automation
+    - homepage.name=ManageMeals
+    - homepage.icon=mdi-silverware-fork-knife
+    - homepage.description=Recipe manager
+    - homepage.href=https://recipes.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["smarthome"]
+    image: ghcr.io/nightwhistler/managemeals:latest
+    container_name: managemeals
+    restart: unless-stopped
+    environment:
+    - ASPNETCORE_ENVIRONMENT=Production
+    - ASPNETCORE_URLS=http://+:8089
+    ports:
+    - "${MANAGEMEALS_PORT:-8089}:8089"
+    volumes:
+    - ${MANAGEMEALS_DATA:-../services-data/system/managemeals}:/app/data
+    networks:
+    - homelab_net
+
+  # --- GROCY ---
+  grocy:
+    labels:
+    - homepage.group=Home & Automation
+    - homepage.name=Grocy
+    - homepage.icon=mdi-home
+    - homepage.description=Household inventory + shopping
+    - homepage.href=https://grocy.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["smarthome"]
+    image: ghcr.io/linuxserver/grocy:latest
+    container_name: grocy
+    restart: unless-stopped
+    environment:
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
+    - DISABLE_BROWSER_OPEN=true
+    ports:
+    - "${GROCY_PORT:-9283}:80"
+    volumes:
+    - ${GROCY_DATA:-../services-data/system/grocy}:/config
+    networks:
+    - homelab_net
 
 networks:
   homelab_net:

@@ -1,9 +1,25 @@
 services:
 
-  # --- SUPER-PRODUCTIVITY sync server (task tracker) ---
-  # The old `johannesjo/super-productivity-server` Docker Hub image was
-  # deprecated; the upstream repo now publishes `ghcr.io/super-productivity/
-  # supersync` (Fastify + Prisma + SQLite, default port 1900).
+  # --- PERPLEXICA ---
+  perplexica:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Perplexica
+    - homepage.icon=mdi-magnify
+    - homepage.description=AI search (Perplexity alt)
+    - homepage.href=https://perplexica.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["paas"]
+    image: itzcrazykns/perplexica:main
+    container_name: perplexica
+    restart: unless-stopped
+    ports:
+    - "${PERPLEXICA_PORT:-8061}:3000"
+    volumes:
+    - ${PERPLEXICA_DATA:-../services-data/system/perplexica}:/home/perplexica/data
+    networks:
+    - homelab_net
+
+  # --- SUPER-PRODUCTIVITY ---
   super-productivity:
     labels:
     - homepage.group=Productivity
@@ -29,53 +45,6 @@ services:
     - "${SUPERPRODUCTIVITY_PORT:-5050}:1900"
     volumes:
     - ${SUPERPRODUCTIVITY_DATA:-../services-data/system/super-productivity}:/data
-    networks:
-    - homelab_net
-
-  # --- MANAGEMEALS (recipe manager) ---
-  managemeals:
-    labels:
-    - homepage.group=Productivity
-    - homepage.name=ManageMeals
-    - homepage.icon=mdi-silverware-fork-knife
-    - homepage.description=Recipe manager
-    - homepage.href=https://recipes.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["productivity"]
-    image: ghcr.io/nightwhistler/managemeals:latest
-    container_name: managemeals
-    restart: unless-stopped
-    environment:
-    - ASPNETCORE_ENVIRONMENT=Production
-    - ASPNETCORE_URLS=http://+:8089
-    ports:
-    - "${MANAGEMEALS_PORT:-8089}:8089"
-    volumes:
-    - ${MANAGEMEALS_DATA:-../services-data/system/managemeals}:/app/data
-    networks:
-    - homelab_net
-
-  # --- 2FAUTH (TOTP token manager) ---
-  twofauth:
-    labels:
-    - homepage.group=Productivity
-    - homepage.name=2FAuth
-    - homepage.icon=si-authy
-    - homepage.description=2FA TOTP token manager
-    - homepage.href=https://2fa.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["productivity"]
-    image: 2fauth/2fauth:latest
-    container_name: twofauth
-    restart: unless-stopped
-    environment:
-    - APP_ENV=production
-    - APP_KEY=${TWOFAUTH_APP_KEY}
-    - APP_URL=https://2fa.${DUCKDNS_DOMAIN:-localhost}
-    - DB_CONNECTION=sqlite
-    - LOG_CHANNEL=stderr
-    ports:
-    - "${TWOFAUTH_PORT:-8050}:8000"
-    volumes:
-    - ${TWOFAUTH_DATA:-../services-data/system/2fauth}:/2fauth/database
     networks:
     - homelab_net
 
@@ -156,77 +125,7 @@ services:
     networks:
     - homelab_net
 
-  # --- GROCY (household inventory + shopping list + meal planning) ---
-  grocy:
-    labels:
-    - homepage.group=Productivity
-    - homepage.name=Grocy
-    - homepage.icon=mdi-home
-    - homepage.description=Household inventory + shopping
-    - homepage.href=https://grocy.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["productivity"]
-    image: ghcr.io/linuxserver/grocy:latest
-    container_name: grocy
-    restart: unless-stopped
-    environment:
-    - PUID=${PUID:-1000}
-    - PGID=${PGID:-1000}
-    - TZ=${TZ:-Europe/Kyiv}
-    - DISABLE_BROWSER_OPEN=true
-    ports:
-    - "${GROCY_PORT:-9283}:80"
-    volumes:
-    - ${GROCY_DATA:-../services-data/system/grocy}:/config
-    networks:
-    - homelab_net
-
-  # --- KEILA (newsletter platform) ---
-  keila:
-    labels:
-    - homepage.group=Productivity
-    - homepage.name=Keila
-    - homepage.icon=si-mailgun
-    - homepage.description=Newsletter (open-source Mailchimp alt)
-    - homepage.href=https://news.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["productivity"]
-    image: pentacent/keila:latest
-    container_name: keila
-    restart: unless-stopped
-    environment:
-    - PHX_HOST=news.${DUCKDNS_DOMAIN:-localhost}
-    - DATABASE_URL=ecto://keila:${KEILA_DB_PASSWORD}@keila-db:5432/keila
-    - SECRET_KEY_BASE=${KEILA_SECRET}
-    - SMTP_HOST=
-    - SMTP_USERNAME=
-    - SMTP_PASSWORD=
-    ports:
-    - "${KEILA_PORT:-4000}:4000"
-    depends_on:
-    - keila-db
-    volumes:
-    - ${KEILA_DATA:-../services-data/system/keila}:/app/data
-    networks:
-    - homelab_net
-
-  # --- KEILA POSTGRES ---
-  keila-db:
-    profiles: ["productivity"]
-    image: postgres:16-alpine
-    container_name: keila-db
-    restart: unless-stopped
-    environment:
-    - POSTGRES_DB=keila
-    - POSTGRES_USER=keila
-    - POSTGRES_PASSWORD=${KEILA_DB_PASSWORD}
-    volumes:
-    - ${KEILA_DB_DATA:-../services-data/system/keila/postgres}:/var/lib/postgresql/data
-    networks:
-    - homelab_net
-
-  # --- KIMAI (time tracking) — moved to compose-finance.yml ---
-
-  # --- AFFINE (local-first Notion + Miro alternative) ---
-  # Single binary / container. Stores blocks locally; Y.js sync optional.
+  # --- AFFINE ---
   affine:
     labels:
     - homepage.group=Productivity
@@ -266,8 +165,48 @@ services:
     networks:
     - homelab_net
 
-  # --- DOCUMENSO (DocuSign alternative, e-signatures) ---
-  # Stack: NestJS API + Next.js frontend + Postgres.
+  # --- MINIFLUX DB (postgres) ---
+  miniflux-db:
+    profiles: ["productivity"]
+    image: postgres:16-alpine
+    container_name: miniflux-db
+    restart: unless-stopped
+    environment:
+    - POSTGRES_DB=miniflux
+    - POSTGRES_USER=miniflux
+    - POSTGRES_PASSWORD=${MINIFLUX_DB_PASSWORD}
+    volumes:
+    - ${MINIFLUX_DB_DATA:-../services-data/system/miniflux/postgres}:/var/lib/postgresql/data
+    networks:
+    - homelab_net
+
+  # --- MINIFLUX (minimalist feed reader) ---
+  miniflux:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Miniflux
+    - homepage.icon=si-feedly
+    - homepage.description=Minimalist feed reader
+    - homepage.href=https://rss.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["productivity"]
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    restart: unless-stopped
+    depends_on:
+    - miniflux-db
+    environment:
+    - DATABASE_URL=postgres://miniflux:${MINIFLUX_DB_PASSWORD}@miniflux-db:5432/miniflux?sslmode=disable
+    - RUN_MIGRATIONS=1
+    - LISTEN_ADDR=:8080
+    - BASE_URL=https://rss.${DUCKDNS_DOMAIN:-localhost}
+    - ADMIN_USERNAME=${MINIFLUX_ADMIN_USER}
+    - ADMIN_PASSWORD=${MINIFLUX_ADMIN_PASSWORD}
+    ports:
+    - "${MINIFLUX_PORT:-8051}:8080"
+    networks:
+    - homelab_net
+
+  # --- DOCUMENSO ---
   documenso:
     labels:
     - homepage.group=Productivity
@@ -320,8 +259,7 @@ services:
     networks:
     - homelab_net
 
-  # --- DOCUSEAL (DocuSign alternative, e-signatures) ---
-  # Ruby on Rails. Single-container with SQLite.
+  # --- DOCUSEAL ---
   docuseal:
     labels:
     - homepage.group=Productivity
@@ -341,6 +279,97 @@ services:
     - "${DOCUSEAL_PORT:-3501}:3000"
     volumes:
     - ${DOCUSEAL_DATA:-../services-data/system/docuseal}:/data
+    networks:
+    - homelab_net
+
+  # --- ACTUAL BUDGET (envelope budgeting) ---
+  actualbudget:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=ActualBudget
+    - homepage.icon=mdi-wallet
+    - homepage.description=Envelope-budget personal finance
+    - homepage.href=https://budget.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["productivity"]
+    image: actualbudget/actual-server:latest
+    container_name: actualbudget
+    restart: unless-stopped
+    environment:
+    - NODE_ENV=production
+    - PORT=5006
+    - ACTUAL_USER_FILE=/data/user-files.json
+    - ACTUAL_PASSWORD=${ACTUALBUDGET_PASSWORD}
+    ports:
+    - "${ACTUALBUDGET_PORT:-5006}:5006"
+    volumes:
+    - ${ACTUALBUDGET_DATA:-../services-data/system/actualbudget}:/data
+    networks:
+    - homelab_net
+
+  # --- WALLOS (subscription tracker) ---
+  wallos:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Wallos
+    - homepage.icon=mdi-credit-card
+    - homepage.description=Subscription tracker
+    - homepage.href=https://subs.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["productivity"]
+    image: bellamy/wallos:latest
+    container_name: wallos
+    restart: unless-stopped
+    ports:
+    - "${WALLOS_PORT:-8087}:80"
+    volumes:
+    - ${WALLOS_DATA:-../services-data/system/wallos}:/var/www/html/db
+    - ${WALLOS_IMAGES:-../services-data/system/wallos/images}:/var/www/html/images/logos/uploads
+    networks:
+    - homelab_net
+
+  # --- SOLIDTIME (time tracking) ---
+  solidtime:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Solidtime
+    - homepage.icon=mdi-clock-outline
+    - homepage.description=Time tracking
+    - homepage.href=https://time.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["productivity"]
+    image: solidtime/solidtime:latest
+    container_name: solidtime
+    restart: unless-stopped
+    environment:
+    - APP_ENV=production
+    - APP_DEBUG=false
+    - APP_KEY=${SOLIDTIME_APP_KEY}
+    - DB_CONNECTION=sqlite
+    ports:
+    - "${SOLIDTIME_PORT:-8088}:80"
+    volumes:
+    - ${SOLIDTIME_DATA:-../services-data/system/solidtime}:/var/www/html/database
+    networks:
+    - homelab_net
+
+  # --- KIMAI ---
+  kimai:
+    labels:
+    - homepage.group=Productivity
+    - homepage.name=Kimai
+    - homepage.icon=mdi-clock-outline
+    - homepage.description=Time tracking + invoicing
+    - homepage.href=https://time-kimai.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["productivity"]
+    image: kimai/kimai2:latest
+    container_name: kimai
+    restart: unless-stopped
+    environment:
+    - APP_ENV=prod
+    - TRUSTED_PROXIES=127.0.0.1,REMOTE_ADDR
+    - DATABASE_URL=sqlite:///%kernel.project_dir%/var/data/kimai.sqlite
+    ports:
+    - "${KIMAI_PORT:-8089}:80"
+    volumes:
+    - ${KIMAI_DATA:-../services-data/system/kimai}:/opt/kimai/var
     networks:
     - homelab_net
 

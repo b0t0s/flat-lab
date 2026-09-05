@@ -1,0 +1,165 @@
+services:
+
+  # --- MONICA ---
+  monica:
+    labels:
+    - homepage.group=Irl
+    - homepage.name=Monica
+    - homepage.icon=mdi-card-account-details
+    - homepage.description=Personal CRM
+    - homepage.href=https://contacts.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["irl"]
+    image: monicahq/monica:5.0-apache
+    container_name: monica
+    restart: unless-stopped
+    environment:
+    - APP_URL=https://contacts.${DUCKDNS_DOMAIN:-localhost}
+    - DB_CONNECTION=mysql
+    - DB_HOST=monica-db
+    - DB_PORT=3306
+    - DB_DATABASE=monica
+    - DB_USERNAME=monica
+    - DB_PASSWORD=${MONICA_DB_PASSWORD}
+    - APP_KEY=${MONICA_APP_KEY}
+    ports:
+    - "${MONICA_PORT:-8040}:80"
+    depends_on:
+    - monica-db
+    volumes:
+    - ${MONICA_DATA:-../services-data/system/monica}:/var/www/html/storage
+    networks:
+    - homelab_net
+
+  # --- MONICA DB (MariaDB) ---
+  monica-db:
+    profiles: ["irl"]
+    image: mariadb:11
+    container_name: monica-db
+    restart: unless-stopped
+    environment:
+    - MARIADB_DATABASE=monica
+    - MARIADB_USER=monica
+    - MARIADB_PASSWORD=${MONICA_DB_PASSWORD}
+    - MARIADB_RANDOM_ROOT_PASSWORD=true
+    volumes:
+    - ${MONICA_DB_DATA:-../services-data/system/monica/db}:/var/lib/mysql
+    networks:
+    - homelab_net
+
+  # --- OPENEMR DB (MariaDB) ---
+  openemr-db:
+    profiles: ["irl"]
+    image: mariadb:11.8.8
+    container_name: openemr-db
+    restart: unless-stopped
+    command:
+    - mariadbd
+    - --character-set-server=utf8mb4
+    environment:
+    - MYSQL_ROOT_PASSWORD=${OPENEMR_DB_ROOT_PASS}
+    - MYSQL_DATABASE=openemr
+    - MYSQL_USER=openemr
+    - MYSQL_PASSWORD=${OPENEMR_DB_PASS}
+    volumes:
+    - ${OPENEMR_DB_DATA:-../services-data/system/openemr-db}:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD
+      - /usr/local/bin/healthcheck.sh
+      - --su-mysql
+      - --connect
+      - --innodb_initialized
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+    networks:
+    - homelab_net
+
+  # --- OPENEMR ---
+  openemr:
+    labels:
+    - homepage.group=Irl
+    - homepage.name=OpenEMR
+    - homepage.icon=mdi-hospital
+    - homepage.description=Medical records (HIPAA)
+    - homepage.href=https://emr.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["irl"]
+    image: openemr/openemr:8.2.0
+    container_name: openemr
+    restart: unless-stopped
+    ports:
+    - "${OPENEMR_PORT:-8300}:80"
+    - "${OPENEMR_PORT:-8300}:443"
+    volumes:
+    - ${OPENEMR_LOG:-../services-data/system/openemr/log}:/var/log
+    - ${OPENEMR_SITES:-../services-data/system/openemr/sites}:/var/www/localhost/htdocs/openemr/sites
+    environment:
+    - MYSQL_HOST=openemr-db
+    - MYSQL_ROOT_PASS=${OPENEMR_DB_ROOT_PASS}
+    - MYSQL_USER=openemr
+    - MYSQL_PASS=${OPENEMR_DB_PASS}
+    - OE_USER=${OPENEMR_ADMIN_USER}
+    - OE_PASS=${OPENEMR_ADMIN_PASS}
+    depends_on:
+      openemr-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - /usr/bin/curl
+      - --fail
+      - --insecure
+      - --location
+      - --show-error
+      - --silent
+      - https://localhost/meta/health/readyz
+      start_period: 3m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+    networks:
+    - homelab_net
+
+  # --- GRAMPS WEB ---
+  gramps-db:
+    profiles: ["irl"]
+    image: postgres:16-alpine
+    container_name: gramps-db
+    restart: unless-stopped
+    environment:
+    - POSTGRES_DB=gramps
+    - POSTGRES_USER=gramps
+    - POSTGRES_PASSWORD=${GRAMPS_DB_PASSWORD}
+    volumes:
+    - ${GRAMPS_DB_DATA:-../services-data/system/gramps-db}:/var/lib/postgresql/data
+    networks:
+    - homelab_net
+
+  gramps-web:
+    labels:
+    - homepage.group=Irl
+    - homepage.name=Gramps
+    - homepage.icon=mdi-family-tree
+    - homepage.description=Genealogy viewer
+    - homepage.href=https://gramps.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["irl"]
+    image: ghcr.io/gramps-project/gramps-webapi:latest
+    container_name: gramps-web
+    restart: unless-stopped
+    environment:
+    - GRAMPS_DATABASE_URI=postgresql://gramps:${GRAMPS_DB_PASSWORD}@gramps-db:5432/gramps
+    - GRAMPS_SECRET_KEY=${GRAMPS_SECRET}
+    depends_on:
+    - gramps-db
+    ports:
+    - "${GRAMPS_PORT:-5001}:5000"
+    networks:
+    - homelab_net
+
+networks:
+  homelab_net:
+    name: homelab_net
+    external: true

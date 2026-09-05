@@ -1,6 +1,142 @@
 services:
 
-  # --- BESZEL HUB (central metrics dashboard) ---
+  # --- RSSHUB ---
+  rsshub:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=RSSHub
+    - homepage.icon=mdi-rss-box
+    - homepage.description=RSS feed generator
+    - homepage.href=https://feeds.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["monitor"]
+    image: diygod/rsshub:latest
+    container_name: rsshub
+    restart: unless-stopped
+    environment:
+    - NODE_ENV=production
+    ports:
+    - "${RSSHUB_PORT:-3503}:1200"
+    networks:
+    - homelab_net
+
+  # --- UPTIME KUMA ---
+  uptime-kuma:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=Uptime Kuma
+    - homepage.icon=mdi-heart-pulse
+    - homepage.description=Uptime monitor
+    - homepage.href=https://status.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["monitor"]
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+    - ${UPTIME_KUMA_DATA_PATH:-../services-data/system/uptime-kuma}:/app/data
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - "${UPTIME_KUMA_PORT:-3001}:3001"
+    networks:
+    - homelab_net
+
+  # --- DOZZLE INIT (creates admin user) ---
+  dozzle-init:
+    profiles: ["monitor"]
+    image: docker:cli
+    container_name: dozzle-init
+    restart: "no"
+    depends_on:
+      dozzle:
+        condition: service_completed_successfully
+    volumes:
+    - ../services-data/system/dozzle:/data
+    entrypoint: /bin/sh
+    command:
+    - -c
+    - |
+      if ! docker ps -a --format '{{.Names}}' | grep -q '^dozzle$$'; then
+        echo "dozzle container not yet created; skipping user bootstrap."
+        exit 0
+      fi
+      if docker exec dozzle test -f /data/users.yaml; then
+        echo "dozzle users.yaml exists. Skipping."
+        exit 0
+      fi
+      echo "Bootstrapping dozzle admin user..."
+      docker exec dozzle /dozzle generate "$${DOZZLE_USER}" --email "$${DOZZLE_EMAIL}" --password "$${DOZZLE_PASSWORD}" --name "operator" --role admin
+      echo "dozzle admin user created."
+
+  # --- DOZZLE (live container logs) ---
+  dozzle:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=Dozzle
+    - homepage.icon=mdi-text-box-search
+    - homepage.description=Container log viewer
+    - homepage.href=https://logs.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["monitor"]
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ../services-data/system/dozzle:/data
+    ports:
+    - "${DOZZLE_PORT:-8888}:8080"
+    networks:
+    - homelab_net
+
+  # --- NETALERTX ---
+  netalertx:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=NetAlertX
+    - homepage.icon=mdi-network
+    - homepage.description=Network scanner / presence
+    - homepage.href=https://netalertx.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["monitor"]
+    image: jokobsk/netalertx:latest
+    container_name: netalertx
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    tmpfs:
+    - /tmp:rw,nosuid,nodev,size=256m
+    environment:
+    - TZ=${TZ:-Europe/Kyiv}
+    - GR_TZ=${TZ:-Europe/Kyiv}
+    volumes:
+    - ${NETALERTX_DATA_PATH:-../services-data/system/netalertx}:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # --- GLANCES (system monitor) ---
+  glances:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=Glances
+    - homepage.icon=mdi-monitor-eye
+    - homepage.description=System monitor
+    - homepage.href=https://glances.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["monitor"]
+    image: nicolargo/glances:latest
+    container_name: glances
+    restart: unless-stopped
+    pid: host
+    privileged: true
+    environment:
+    - GLANCES_OPT=-w
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ${GLANCES_DATA_PATH:-../services-data/system/glances}:/glances/conf
+    ports:
+    - "${GLANCES_PORT:-61208}:61208"
+    networks:
+    - homelab_net
+
+  # --- BESZEL HUB ---
   beszel-hub:
     labels:
     - homepage.group=Infrastructure
@@ -19,7 +155,7 @@ services:
     networks:
     - homelab_net
 
-  # --- BESZEL AGENT (monitors the host running the stack) ---
+  # --- BESZEL AGENT ---
   beszel-agent:
     profiles: ["monitor"]
     image: henrygd/beszel-agent:latest
@@ -32,37 +168,7 @@ services:
     - PORT=45876
     - KEY=${BESZEL_AGENT_KEY}
 
-  # --- NTFY (push notifications) ---
-  ntfy:
-    labels:
-    - homepage.group=Infrastructure
-    - homepage.name=ntfy
-    - homepage.icon=mdi-bell-ring
-    - homepage.description=Notification pub/sub
-    - homepage.href=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["monitor"]
-    image: binwiederhier/ntfy:latest
-    container_name: ntfy
-    restart: unless-stopped
-    command: serve
-    environment:
-    - TZ=${TZ:-Europe/Kyiv}
-    - NTFY_BASE_URL=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
-    - NTFY_AUTH_DEFAULT_ACCESS=deny-all
-    - NTFY_ENABLE_LOGIN=true
-    - NTFY_BEHIND_PROXY=true
-    volumes:
-    - ${NTFY_CACHE:-../services-data/system/ntfy/cache}:/var/cache/ntfy
-    - ${NTFY_AUTH:-../services-data/system/ntfy/auth}:/var/lib/ntfy
-    - ${NTFY_CONFIG:-../services-data/system/ntfy/config}:/etc/ntfy
-    ports:
-    - "${NTFY_PORT:-2586}:80"
-    networks:
-    - homelab_net
-
-  # --- PLAUSIBLE (privacy-focused web analytics) ---
-  # Stack: ClickHouse + Postgres + Plausible tracker + frontend.
-  # Heavier than Umami but with more polish.
+  # --- PLAUSIBLE ---
   plausible-events:
     profiles: ["monitor"]
     image: plausible/events:latest

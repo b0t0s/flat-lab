@@ -3,7 +3,7 @@ services:
   # --- MEMOS (notes/microblog) ---
   memos:
     labels:
-    - homepage.group=Productivity
+    - homepage.group=Knowledge
     - homepage.name=Memos
     - homepage.icon=mdi-note-multiple
     - homepage.description=Notes + microblog
@@ -32,11 +32,6 @@ services:
     - MYSQL_PASSWORD=${GHOST_DB_PASS}
     volumes:
     - ${GHOST_DB_DATA:-../services-data/system/ghost-db}:/var/lib/mysql
-    # If the data dir was left in a half-initialized state by a previous
-    # failed run (MySQL aborts with "data directory has files in it"),
-    # Ghost can't connect (`getaddrinfo ENOTFOUND ghost-db` cascades from
-    # MySQL never becoming ready). Healthcheck ensures Ghost waits until
-    # MySQL is actually accepting connections.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${GHOST_DB_ROOT_PASS}"]
       interval: 10s
@@ -45,7 +40,7 @@ services:
     networks:
     - homelab_net
 
-  # --- GHOST (blog/CMS) ---
+  # --- GHOST ---
   ghost:
     labels:
     - homepage.group=Knowledge
@@ -74,7 +69,31 @@ services:
     networks:
     - homelab_net
 
-  # --- ARCHIVEBOX (web archiver) ---
+  # --- CALIBRE-WEB ---
+  calibre-web:
+    labels:
+    - homepage.group=Knowledge
+    - homepage.name=Calibre
+    - homepage.icon=mdi-book-open-page-variant
+    - homepage.description=Book library browser
+    - homepage.href=https://books.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["knowledge"]
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    restart: unless-stopped
+    environment:
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
+    ports:
+    - "${CALIBRE_HOST_PORT:-8083}:8083"
+    volumes:
+    - ${CALIBRE_DATA:-../services-data/media/calibre-web}:/config
+    - ${CALIBRE_LIBRARY:-../services-data/media/books}:/books:ro
+    networks:
+    - homelab_net
+
+  # --- ARCHIVEBOX ---
   archivebox:
     labels:
     - homepage.group=Knowledge
@@ -97,7 +116,7 @@ services:
     networks:
     - homelab_net
 
-  # --- CHANGEDETECTION (web page change monitor) ---
+  # --- CHANGEDETECTION ---
   changedetection:
     labels:
     - homepage.group=Infrastructure
@@ -116,7 +135,7 @@ services:
     networks:
     - homelab_net
 
-  # --- DAWARICH (location timeline) ---
+  # --- DAWARICH ---
   dawarich:
     labels:
     - homepage.group=Knowledge
@@ -138,7 +157,7 @@ services:
     networks:
     - homelab_net
 
-  # --- ADVENTURELOG (travel journal) ---
+  # --- ADVENTURELOG ---
   adventurelog:
     labels:
     - homepage.group=Knowledge
@@ -160,7 +179,7 @@ services:
     networks:
     - homelab_net
 
-  # --- FAVED (bookmarks) ---
+  # --- FAVED ---
   faved:
     labels:
     - homepage.group=Knowledge
@@ -182,41 +201,46 @@ services:
     networks:
     - homelab_net
 
-  # --- IT-TOOLS (developer utilities) ---
-  it-tools:
+  # --- KEILA ---
+  keila:
     labels:
     - homepage.group=Knowledge
-    - homepage.name=IT-Tools
-    - homepage.icon=mdi-tools
-    - homepage.description=Developer toolbox
-    - homepage.href=https://tools.${DUCKDNS_DOMAIN:-localhost}
+    - homepage.name=Keila
+    - homepage.icon=si-mailgun
+    - homepage.description=Newsletter (open-source Mailchimp alt)
+    - homepage.href=https://news.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["knowledge"]
-    image: corentinth/it-tools:latest
-    container_name: it-tools
+    image: pentacent/keila:latest
+    container_name: keila
     restart: unless-stopped
+    environment:
+    - PHX_HOST=news.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=ecto://keila:${KEILA_DB_PASSWORD}@keila-db:5432/keila
+    - SECRET_KEY_BASE=${KEILA_SECRET}
+    - SMTP_HOST=
+    - SMTP_USERNAME=
+    - SMTP_PASSWORD=
     ports:
-    - "${ITTOOLS_HOST_PORT:-8082}:80"
+    - "${KEILA_PORT:-4000}:4000"
+    depends_on:
+    - keila-db
+    volumes:
+    - ${KEILA_DATA:-../services-data/system/keila}:/app/data
     networks:
     - homelab_net
 
-  # --- CONVERTX (file converter) ---
-  convertx:
-    labels:
-    - homepage.group=Sharing
-    - homepage.name=ConvertX
-    - homepage.icon=mdi-file-convert
-    - homepage.description=File converter
-    - homepage.href=https://convert.${DUCKDNS_DOMAIN:-localhost}
+  # --- KEILA POSTGRES ---
+  keila-db:
     profiles: ["knowledge"]
-    image: ghcr.io/c4illin/convertx:latest
-    container_name: convertx
+    image: postgres:16-alpine
+    container_name: keila-db
     restart: unless-stopped
     environment:
-    - JWT_SECRET=${CONVERTX_JWT_SECRET}
-    ports:
-    - "${CONVERTX_HOST_PORT:-8086}:3000"
+    - POSTGRES_DB=keila
+    - POSTGRES_USER=keila
+    - POSTGRES_PASSWORD=${KEILA_DB_PASSWORD}
     volumes:
-    - ${CONVERTX_DATA:-../services-data/system/convertx}:/app/data
+    - ${KEILA_DB_DATA:-../services-data/system/keila/postgres}:/var/lib/postgresql/data
     networks:
     - homelab_net
 
@@ -280,47 +304,6 @@ services:
     - ${PAPERLESS_MEDIA:-../services-data/system/paperless/media}:/usr/src/paperless/media
     - ${PAPERLESS_EXPORT:-../services-data/system/paperless/export}:/usr/src/paperless/export
     - ${PAPERLESS_CONSUME:-../services-data/system/paperless/consume}:/usr/src/paperless/consume
-    networks:
-    - homelab_net
-
-  # --- MINIFLUX DB (postgres) ---
-  miniflux-db:
-    profiles: ["knowledge"]
-    image: postgres:16-alpine
-    container_name: miniflux-db
-    restart: unless-stopped
-    environment:
-    - POSTGRES_DB=miniflux
-    - POSTGRES_USER=miniflux
-    - POSTGRES_PASSWORD=${MINIFLUX_DB_PASSWORD}
-    volumes:
-    - ${MINIFLUX_DB_DATA:-../services-data/system/miniflux/postgres}:/var/lib/postgresql/data
-    networks:
-    - homelab_net
-
-  # --- MINIFLUX (minimalist feed reader) ---
-  miniflux:
-    labels:
-    - homepage.group=Knowledge
-    - homepage.name=Miniflux
-    - homepage.icon=si-feedly
-    - homepage.description=Minimalist feed reader
-    - homepage.href=https://rss.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["knowledge"]
-    image: miniflux/miniflux:latest
-    container_name: miniflux
-    restart: unless-stopped
-    depends_on:
-    - miniflux-db
-    environment:
-    - DATABASE_URL=postgres://miniflux:${MINIFLUX_DB_PASSWORD}@miniflux-db:5432/miniflux?sslmode=disable
-    - RUN_MIGRATIONS=1
-    - LISTEN_ADDR=:8080
-    - BASE_URL=https://rss.${DUCKDNS_DOMAIN:-localhost}
-    - ADMIN_USERNAME=${MINIFLUX_ADMIN_USER}
-    - ADMIN_PASSWORD=${MINIFLUX_ADMIN_PASSWORD}
-    ports:
-    - "${MINIFLUX_PORT:-8051}:8080"
     networks:
     - homelab_net
 
@@ -452,26 +435,7 @@ services:
     networks:
     - homelab_net
 
-  # --- EXCALIDRAW (virtual whiteboard, hand-drawn diagrams) ---
-  # Single-container React app. Stateless - data lives in browser localStorage.
-  excalidraw:
-    labels:
-    - homepage.group=Knowledge
-    - homepage.name=Excalidraw
-    - homepage.icon=mdi-draw
-    - homepage.description=Hand-drawn diagram whiteboard
-    - homepage.href=https://draw.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["knowledge"]
-    image: excalidraw/excalidraw:latest
-    container_name: excalidraw
-    restart: unless-stopped
-    ports:
-    - "${EXCALIDRAW_PORT:-3502}:80"
-    networks:
-    - homelab_net
-
-  # --- SIYUAN NOTE (privacy-first personal knowledge management) ---
-  # Single Go binary. Stores blocks locally; sync via cloud S3 / WebDAV.
+  # --- SIYUAN NOTE ---
   siyuan:
     labels:
     - homepage.group=Knowledge
@@ -498,23 +462,131 @@ services:
     networks:
     - homelab_net
 
-  # --- RSSHUB (RSS feed generator for almost anything) ---
-  # Pairs with miniflux/freshrss as upstream feed source.
-  rsshub:
-    labels:
-    - homepage.group=Knowledge
-    - homepage.name=RSSHub
-    - homepage.icon=mdi-rss-box
-    - homepage.description=RSS feed generator
-    - homepage.href=https://feeds.${DUCKDNS_DOMAIN:-localhost}
+  # --- MEILISEARCH for Linkwarden ---
+  linkwarden-meilisearch:
     profiles: ["knowledge"]
-    image: diygod/rsshub:latest
-    container_name: rsshub
+    image: getmeili/meilisearch:v1.10
+    container_name: linkwarden-meilisearch
     restart: unless-stopped
     environment:
-    - NODE_ENV=production
+    - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
+    - MEILI_ENV=production
+    volumes:
+    - ${LINKWARDEN_MEILI_DATA:-../services-data/system/linkwarden/meilisearch}:/meili_data
+    networks:
+    - homelab_net
+
+  # --- LINKWARDEN POSTGRES ---
+  linkwarden-db:
+    profiles: ["knowledge"]
+    image: postgres:16-alpine
+    container_name: linkwarden-db
+    restart: unless-stopped
+    environment:
+    - POSTGRES_USER=linkwarden
+    - POSTGRES_PASSWORD=${LINKWARDEN_DB_PASSWORD}
+    - POSTGRES_DB=linkwarden
+    volumes:
+    - ${LINKWARDEN_DB_DATA:-../services-data/system/linkwarden/postgres}:/var/lib/postgresql/data
+    networks:
+    - homelab_net
+
+  # --- LINKWARDEN ---
+  linkwarden:
+    labels:
+    - homepage.group=Knowledge
+    - homepage.name=Linkwarden
+    - homepage.icon=mdi-link-variant
+    - homepage.description=Bookmark manager (collaborative)
+    - homepage.href=https://links.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["knowledge"]
+    image: ghcr.io/linkwarden/linkwarden:latest
+    container_name: linkwarden
+    restart: unless-stopped
+    environment:
+    - DATABASE_URL=postgresql://linkwarden:${LINKWARDEN_DB_PASSWORD}@linkwarden-db:5432/linkwarden
+    - MEILI_HOST=http://linkwarden-meilisearch:7700
+    - MEILI_URL=http://linkwarden-meilisearch:7700
+    - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
+    - NEXTAUTH_SECRET=${LINKWARDEN_SECRET}
+    - NEXTAUTH_URL=https://links.${DUCKDNS_DOMAIN:-localhost}
+    - STORAGE_FOLDER=/data/data
+    depends_on:
+    - linkwarden-db
+    - linkwarden-meilisearch
     ports:
-    - "${RSSHUB_PORT:-3503}:1200"
+    - "${LINKWARDEN_PORT:-3009}:3000"
+    volumes:
+    - ${LINKWARDEN_DATA:-../services-data/system/linkwarden/data}/data:/data/data
+    networks:
+    - homelab_net
+
+  # --- KARAKEEP ---
+  karakeep:
+    labels:
+    - homepage.group=Knowledge
+    - homepage.name=Karakeep
+    - homepage.icon=mdi-bookmark-multiple
+    - homepage.description=Bookmark + read-later
+    - homepage.href=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["knowledge"]
+    image: ghcr.io/karakeep-dev/karakeep:latest
+    container_name: karakeep
+    restart: unless-stopped
+    depends_on:
+    - karakeep-db
+    - karakeep-redis
+    - karakeep-meilisearch
+    environment:
+    - NODE_ENV=production
+    - PORT=3000
+    - DATABASE_URL=postgres://karakeep:${KARAKEEP_DB_PASSWORD}@karakeep-db:5432/karakeep
+    - REDIS_URL=redis://karakeep-redis:6379
+    - NEXTAUTH_SECRET=${KARAKEEP_SECRET}
+    - NEXTAUTH_URL=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
+    - DATA_DIR=/data
+    - MEILI_HOST=http://karakeep-meilisearch:7700
+    - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
+    ports:
+    - "${KARAKEEP_PORT:-3505}:3000"
+    networks:
+    - homelab_net
+
+  # --- KARAKEEP POSTGRES ---
+  karakeep-db:
+    profiles: ["knowledge"]
+    image: postgres:16-alpine
+    container_name: karakeep-db
+    restart: unless-stopped
+    environment:
+    - POSTGRES_DB=karakeep
+    - POSTGRES_USER=karakeep
+    - POSTGRES_PASSWORD=${KARAKEEP_DB_PASSWORD}
+    volumes:
+    - ${KARAKEEP_DB_DATA:-../services-data/system/karakeep/postgres}:/var/lib/postgresql/data
+    networks:
+    - homelab_net
+
+  # --- KARAKEEP REDIS ---
+  karakeep-redis:
+    profiles: ["knowledge"]
+    image: redis:7-alpine
+    container_name: karakeep-redis
+    restart: unless-stopped
+    networks:
+    - homelab_net
+
+  # --- KARAKEEP MEILISEARCH ---
+  karakeep-meilisearch:
+    profiles: ["knowledge"]
+    image: getmeili/meilisearch:v1.10
+    container_name: karakeep-meilisearch
+    restart: unless-stopped
+    environment:
+    - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
+    - MEILI_ENV=production
+    volumes:
+    - ${KARAKEEP_MEILI_DATA:-../services-data/system/karakeep/meilisearch}:/meili_data
     networks:
     - homelab_net
 

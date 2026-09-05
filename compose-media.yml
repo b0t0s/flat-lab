@@ -1,27 +1,28 @@
 services:
 
-  # --- JELLYFIN (media server) ---
-  jellyfin:
+  # --- METUBE ---
+  metube:
     labels:
     - homepage.group=Media & Entertainment
-    - homepage.name=Jellyfin
-    - homepage.icon=mdi-play-circle
-    - homepage.description=Movies + TV streaming
-    - homepage.href=https://media.${DUCKDNS_DOMAIN:-localhost}
+    - homepage.name=MeTube
+    - homepage.icon=mdi-youtube
+    - homepage.description=YouTube downloader
+    - homepage.href=https://metube.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
+    image: ghcr.io/alexta69/metube:latest
+    container_name: metube
     restart: unless-stopped
+    dns:
+    - "${DNS1:-}"
+    - "${DNS2:-}"
     ports:
-    - "8096:8096"
+    - "${METUBE_HOST_PORT:-8091}:8081"
     volumes:
-    - ${JELLYFIN_CONFIG:-../services-data/media/jellyfin/config}:/config
-    - ${JELLYFIN_CACHE:-../services-data/media/jellyfin/cache}:/cache
-    - ${MEDIA_FOLDERS:-../services-data/media}:/media:ro
+    - ${METUBE_DATA:-../services-data/media/videos}:/downloads
     networks:
     - homelab_net
 
-  # --- NAVIDROME (music streaming) ---
+  # --- NAVIDROME ---
   navidrome:
     labels:
     - homepage.group=Media & Entertainment
@@ -46,7 +47,28 @@ services:
     networks:
     - homelab_net
 
-  # --- KAVITA (comics/manga reader) ---
+  # --- JELLYFIN ---
+  jellyfin:
+    labels:
+    - homepage.group=Media & Entertainment
+    - homepage.name=Jellyfin
+    - homepage.icon=mdi-play-circle
+    - homepage.description=Movies + TV streaming
+    - homepage.href=https://media.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["media"]
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    ports:
+    - "8096:8096"
+    volumes:
+    - ${JELLYFIN_CONFIG:-../services-data/media/jellyfin/config}:/config
+    - ${JELLYFIN_CACHE:-../services-data/media/jellyfin/cache}:/cache
+    - ${MEDIA_FOLDERS:-../services-data/media}:/media:ro
+    networks:
+    - homelab_net
+
+  # --- KAVITA ---
   kavita:
     labels:
     - homepage.group=Media & Entertainment
@@ -69,60 +91,10 @@ services:
     networks:
     - homelab_net
 
-  # --- CALIBRE-WEB (ebook reader) ---
-  calibre-web:
-    labels:
-    - homepage.group=Knowledge
-    - homepage.name=Calibre
-    - homepage.icon=mdi-book-open-page-variant
-    - homepage.description=Book library browser
-    - homepage.href=https://books.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["media"]
-    image: lscr.io/linuxserver/calibre-web:latest
-    container_name: calibre-web
-    restart: unless-stopped
-    environment:
-    - PUID=${PUID:-1000}
-    - PGID=${PGID:-1000}
-    - TZ=${TZ:-Europe/Kyiv}
-    ports:
-    - "${CALIBRE_HOST_PORT:-8083}:8083"
-    volumes:
-    - ${CALIBRE_DATA:-../services-data/media/calibre-web}:/config
-    - ${CALIBRE_LIBRARY:-../services-data/media/books}:/books:ro
-    networks:
-    - homelab_net
-
-  # --- QBITTORRENT INIT (configures qBittorrent API on first run) ---
-  qbittorrent-init:
-    profiles: ["media"]
-    image: alpine:latest
-    container_name: qbittorrent-init
-    restart: "no"
-    depends_on:
-      qbittorrent:
-        condition: service_started
-    volumes:
-    - ../services-data/system/qbittorrent-init:/init
-    entrypoint: /bin/sh
-    command:
-    - -c
-    - |
-      apk add --no-cache curl >/dev/null
-      sleep 5
-      if [ ! -f /init/qbittorrent.json ]; then
-        echo "Bootstrapping qBittorrent..."
-        curl -s -c /init/qbittorrent.json -X POST http://qbittorrent:8080/api/v2/auth/login \
-          -d "username=admin&password=adminadmin" >/dev/null 2>&1 || true
-        echo "qBittorrent bootstrap complete (check logs)."
-      else
-        echo "qbittorrent.json exists. Skipping."
-      fi
-
   # --- QBITTORRENT ---
   qbittorrent:
     labels:
-    - homepage.group=Downloads
+    - homepage.group=Media & Entertainment
     - homepage.name=qBittorrent
     - homepage.icon=mdi-magnet
     - homepage.description=Torrent client
@@ -147,10 +119,10 @@ services:
     networks:
     - homelab_net
 
-  # --- PROWLARR (indexer manager) ---
+  # --- PROWLARR ---
   prowlarr:
     labels:
-    - homepage.group=Downloads
+    - homepage.group=Media & Entertainment
     - homepage.name=Prowlarr
     - homepage.icon=mdi-magnify
     - homepage.description=Indexer manager
@@ -170,10 +142,10 @@ services:
     networks:
     - homelab_net
 
-  # --- RADARR (movies) ---
+  # --- RADARR ---
   radarr:
     labels:
-    - homepage.group=Downloads
+    - homepage.group=Media & Entertainment
     - homepage.name=Radarr
     - homepage.icon=mdi-movie
     - homepage.description=Movie library manager
@@ -195,10 +167,10 @@ services:
     networks:
     - homelab_net
 
-  # --- SONARR (TV shows) ---
+  # --- SONARR ---
   sonarr:
     labels:
-    - homepage.group=Downloads
+    - homepage.group=Media & Entertainment
     - homepage.name=Sonarr
     - homepage.icon=mdi-television
     - homepage.description=TV library manager
@@ -220,85 +192,111 @@ services:
     networks:
     - homelab_net
 
-  # --- METUBE (YouTube downloader) ---
-  metube:
+  # --- PIGALLERY2 ---
+  pigallery2:
     labels:
-    - homepage.group=Downloads
-    - homepage.name=MeTube
-    - homepage.icon=mdi-youtube
-    - homepage.description=YouTube downloader
-    - homepage.href=https://metube.${DUCKDNS_DOMAIN:-localhost}
+    - homepage.group=Media & Entertainment
+    - homepage.name=PiGallery2
+    - homepage.icon=mdi-image-multiple
+    - homepage.description=Photo gallery
+    - homepage.href=https://gallery.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
-    image: ghcr.io/alexta69/metube:latest
-    container_name: metube
+    image: bpatrik/pigallery2:latest
+    container_name: pigallery2
     restart: unless-stopped
-    # Switchable DNS override for dev-PC testing. On the Pi (default),
-    # DNS1/DNS2 are unset → Docker falls back to host's resolv.conf. On a
-    # dev PC without LAN AdGuard, set DNS1/DNS2 in .env to public DNS.
-    # See docs/ignored/docker-dns-decision-2026-08.md
-    dns:
-    - "${DNS1:-}"
-    - "${DNS2:-}"
+    environment:
+    - NODE_ENV=production
     ports:
-    - "${METUBE_HOST_PORT:-8091}:8081"
+    - "${PIGALLERY2_PORT:-8089}:80"
     volumes:
-    - ${METUBE_DATA:-../services-data/media/videos}:/downloads
+    - ${PIGALLERY2_DATA:-../services-data/system/pigallery2/config}:/app/data/config
+    - ${PIGALLERY2_PHOTOS:-../services-data/media/photos}:/app/data/photos:ro
     networks:
     - homelab_net
 
-  # --- FLARESOLVERR (Cloudflare bypass for indexers) ---
-  flaresolverr:
+  # --- IMMICH REDIS ---
+  immich-redis:
     profiles: ["media"]
-    image: ghcr.io/flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
+    image: redis:7-alpine
+    container_name: immich-redis
     restart: unless-stopped
-    environment:
-    - LOG_LEVEL=info
-    ports:
-    - "${FLARESOLVERR_PORT:-8191}:8191"
+    volumes:
+    - ${IMMICH_REDIS_DATA:-../services-data/system/immich/redis}:/data
     networks:
     - homelab_net
 
-  # --- PINGVIN-SHARE (file sharing) ---
-  pingvin-share:
-    labels:
-    - homepage.group=Sharing
-    - homepage.name=Pingvin Share
-    - homepage.icon=mdi-share-variant
-    - homepage.description=File share (WeTransfer alt)
-    - homepage.href=https://share.${DUCKDNS_DOMAIN:-localhost}
+  # --- IMMICH POSTGRES ---
+  immich-postgres:
     profiles: ["media"]
-    image: stonith404/pingvin-share:latest
-    container_name: pingvin-share
+    image: ghcr.io/immich-app/postgres:16-vectorchord0.5.3-pgvector0.8.1
+    container_name: immich-postgres
     restart: unless-stopped
     environment:
-    - TZ=${TZ:-Europe/Kyiv}
-    ports:
-    - "${PINGVIN_HOST_PORT:-3010}:3000"
+    - POSTGRES_USER=immich
+    - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD}
+    - POSTGRES_DB=immich
     volumes:
-    - ${PINGVIN_DATA:-../services-data/system/pingvin-share}:/app/backend/pingvin-share-data
+    - ${IMMICH_PG_DATA:-../services-data/system/immich/postgres}:/var/lib/postgresql/data
     networks:
     - homelab_net
 
-  # --- FILEBROWSER QUANTUM ---
-  filebrowser-quantum:
-    labels:
-    - homepage.group=Infrastructure
-    - homepage.name=FileBrowser
-    - homepage.icon=si-filebrowser
-    - homepage.description=Web file manager
-    - homepage.href=https://files.${DUCKDNS_DOMAIN:-localhost}
+  # --- IMMICH TYPESENSE ---
+  immich-typesense:
     profiles: ["media"]
-    image: gtstef/filebrowser:1.3.3-stable
-    container_name: filebrowser-quantum
+    image: typesense/typesense:27.1
+    container_name: immich-typesense
     restart: unless-stopped
     environment:
-    - FB_BASEURL=/
-    ports:
-    - "${FILEBROWSER_QUANTUM_PORT:-8090}:80"
+    - TYPESENSE_API_KEY=${IMMICH_TYPESENSE_KEY}
+    - TYPESENSE_DATA_DIR=/data
     volumes:
-    - ${FILEBROWSER_DATA:-../services-data/system/filebrowser-quantum}:/config
-    - ${FILEBROWSER_FILES:-../services-data/public}:/srv
+    - ${IMMICH_TYPESENSE_DATA:-../services-data/system/immich/typesense}:/data
+    networks:
+    - homelab_net
+
+  # --- IMMICH MACHINE LEARNING (disabled; IMMICH_NO_MACHINE_LEARNING=true on server) ---
+  # Block kept commented for reference. ML model is heavy on Pi 5.
+  # To re-enable: uncomment, set IMMICH_NO_MACHINE_LEARNING=false on immich-server, add immich-machine-learning back to depends_on.
+  # immich-machine-learning:
+  #   profiles: ["photos"]
+  #   image: ghcr.io/immich-app/immich-machine-learning:release
+  #   container_name: immich-machine-learning
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ${IMMICH_MODEL_CACHE:-../services-data/system/immich/model-cache}:/cache
+  #   networks:
+  #     - homelab_net
+
+  # --- IMMICH SERVER ---
+  immich-server:
+    labels:
+    - homepage.group=Media & Entertainment
+    - homepage.name=Immich
+    - homepage.icon=mdi-image-multiple
+    - homepage.description=Photo & video backup
+    - homepage.href=https://photos.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["media"]
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    restart: unless-stopped
+    environment:
+    - DB_HOSTNAME=immich-postgres
+    - DB_USERNAME=immich
+    - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+    - DB_DATABASE_NAME=immich
+    - REDIS_HOSTNAME=immich-redis
+    - TYPESENSE_API_KEY=${IMMICH_TYPESENSE_KEY}
+    - TYPESENSE_HOST=immich-typesense
+    - IMMICH_NO_MACHINE_LEARNING=true
+    depends_on:
+    - immich-redis
+    - immich-postgres
+    - immich-typesense
+    ports:
+    - "${IMMICH_PORT:-2283}:2283"
+    volumes:
+    - ${IMMICH_UPLOAD:-../services-data/media/photos}:/usr/src/app/upload
+    - ${IMMICH_DATA:-../services-data/system/immich/config}:/usr/src/app/config
     networks:
     - homelab_net
 

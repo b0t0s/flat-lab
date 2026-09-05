@@ -47,7 +47,90 @@ services:
     networks:
     - homelab_net
 
-  # --- OLIVETIN (server control panel) ---
+  # --- OPENGIST ---
+  opengist:
+    labels:
+    - homepage.group=Development
+    - homepage.name=Opengist
+    - homepage.icon=mdi-source-repository
+    - homepage.description=Code snippet pastebin
+    - homepage.href=https://gist.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: ghcr.io/thomiceli/opengist:latest
+    container_name: opengist
+    restart: unless-stopped
+    environment:
+    - OG_LISTEN_HOST=0.0.0.0
+    - OG_LISTEN_PORT=6157
+    - OG_REPOSITORY_PATH=/app/repositories
+    - OG_SECRET_KEY=${OPENGIST_SECRET}
+    ports:
+    - "${OPENGIST_PORT:-6157}:6157"
+    volumes:
+    - ${OPENGIST_DATA:-../services-data/system/opengist}:/app/opengist-data
+    - ${OPENGIST_REPOS:-../services-data/system/opengist-repos}:/app/repositories
+    networks:
+    - homelab_net
+
+  # --- PHATCRACK DB ---
+  phatcrack-db:
+    profiles: ["dev"]
+    image: postgres:16-alpine
+    container_name: phatcrack-db
+    restart: unless-stopped
+    environment:
+    - POSTGRES_USER=phatcrack
+    - POSTGRES_PASSWORD=${DB_PASS}
+    - POSTGRES_DB=phatcrack
+    volumes:
+    - ${PHATCRACK_DB_DATA:-../services-data/system/phatcrack-db}:/var/lib/postgresql/data
+    networks:
+    - homelab_net
+
+  # --- PHATCRACK API ---
+  phatcrack-api:
+    profiles: ["dev"]
+    image: d3vilh/phatcrack-api:latest
+    container_name: phatcrack-api
+    restart: unless-stopped
+    environment:
+    - PHATRACK_DB_HOST=phatcrack-db
+    - PHATRACK_DB_USER=phatcrack
+    - PHATRACK_DB_PASS=${DB_PASS}
+    - PHATRACK_DB_NAME=phatcrack
+    - PHATRACK_HOST_NAME=${HOST_NAME}
+    - PHATRACK_BASE_URL=${BASE_URL}
+    - PHATRACK_USER=${PHATCRACK_USER}
+    ports:
+    - "${PHATCRACK_API_PORT:-8444}:8444"
+    depends_on:
+    - phatcrack-db
+    networks:
+    - homelab_net
+
+  # --- PHATCRACK FRONTEND ---
+  phatcrack-frontend:
+    labels:
+    - homepage.group=Development
+    - homepage.name=Phatcrack
+    - homepage.icon=mdi-hammer-wrench
+    - homepage.description=Hashcat web frontend
+    - homepage.href=https://phatcrack.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: d3vilh/phatcrack-frontend:latest
+    container_name: phatcrack-frontend
+    restart: unless-stopped
+    environment:
+    - HOST_NAME=${HOST_NAME}
+    - BASE_URL=${BASE_URL}
+    ports:
+    - "${PHATCRACK_FRONTEND_PORT:-8445}:80"
+    depends_on:
+    - phatcrack-api
+    networks:
+    - homelab_net
+
+  # --- OLIVETIN ---
   olivetin:
     labels:
     - homepage.group=Development
@@ -64,6 +147,90 @@ services:
     volumes:
     - ${OLIVETIN_DATA:-../services-data/system/olivetin}:/config
     - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+    - homelab_net
+
+  # --- IT-TOOLS ---
+  it-tools:
+    labels:
+    - homepage.group=Development
+    - homepage.name=IT-Tools
+    - homepage.icon=mdi-tools
+    - homepage.description=Developer toolbox
+    - homepage.href=https://tools.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    restart: unless-stopped
+    ports:
+    - "${ITTOOLS_HOST_PORT:-8082}:80"
+    networks:
+    - homelab_net
+
+  # --- CONVERTX ---
+  convertx:
+    labels:
+    - homepage.group=Development
+    - homepage.name=ConvertX
+    - homepage.icon=mdi-file-convert
+    - homepage.description=File converter
+    - homepage.href=https://convert.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: ghcr.io/c4illin/convertx:latest
+    container_name: convertx
+    restart: unless-stopped
+    environment:
+    - JWT_SECRET=${CONVERTX_JWT_SECRET}
+    ports:
+    - "${CONVERTX_HOST_PORT:-8086}:3000"
+    volumes:
+    - ${CONVERTX_DATA:-../services-data/system/convertx}:/app/data
+    networks:
+    - homelab_net
+
+  # --- WHOIS ---
+  whois:
+    labels:
+    - homepage.group=Development
+    - homepage.name=Whois
+    - homepage.icon=mdi-account-search
+    - homepage.description=WHOIS lookup
+    - homepage.href=https://whois.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: ghcr.io/kincaidyang/whois:latest
+    container_name: whois
+    restart: unless-stopped
+    environment:
+    - WHOIS_PORT=8043
+    - WHOIS_RATE_LIMIT=100
+    - WHOIS_LOG_LEVEL=info
+    - WHOIS_CACHE_EXPIRATION=3600
+    - WHOIS_NEGATIVE_CACHE_EXPIRATION=60
+    - WHOIS_REQUIRE_REDIS=false
+    - WHOIS_MEMORY_MAX_SIZE=10000
+    - WHOIS_MEMORY_CLEAN_INTERVAL=300
+    - WHOIS_AUTH_KEYS=${WHOIS_API_KEY}
+    ports:
+    - "${WHOIS_PORT:-8043}:8043"
+    networks:
+    - homelab_net
+
+  # --- MYSPEED ---
+  myspeed:
+    labels:
+    - homepage.group=Development
+    - homepage.name=MySpeed
+    - homepage.icon=mdi-speedometer
+    - homepage.description=Speed test tracker
+    - homepage.href=https://speed.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["dev"]
+    image: gnmyt/myspeed:latest
+    container_name: myspeed
+    restart: unless-stopped
+    ports:
+    - "${MYSPEED_PORT:-5216}:5216"
+    volumes:
+    - ${MYSPEED_DATA_PATH:-../services-data/system/myspeed}:/config
     networks:
     - homelab_net
 

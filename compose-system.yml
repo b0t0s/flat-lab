@@ -12,14 +12,55 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock
     command: /bin/sh -c "while true; do sleep 86400; echo 'Starting daily prune...'; docker system prune -af --filter 'until=24h'; docker builder prune -af; echo 'Prune complete.'; done"
 
-  # --- GLOBAL REVERSE PROXY (CADDY) ---
+  # --- ZEROTIER INIT ---
+  zerotier-init:
+    profiles: ["system"]
+    image: alpine:latest
+    container_name: zerotier-init
+    restart: "no"
+    volumes:
+    - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
+    entrypoint: /bin/sh
+    command:
+    - -c
+    - |
+      if [ ! -f /var/lib/zerotier-one/local.conf ]; then
+        echo "Configuring zerotier-one to listen on all interfaces..."
+        printf '{"settings":{"tcpListenAddress":"0.0.0.0:9993"}}\n' > /var/lib/zerotier-one/local.conf
+        echo "local.conf written."
+      else
+        echo "local.conf already exists. Skipping."
+      fi
+
+  # --- ZEROTIER ---
+  zerotier:
+    build:
+      context: ./zerotier
+      dockerfile: Dockerfile
+    container_name: zerotier
+    profiles: ["system"]
+    restart: unless-stopped
+    labels:
+    - glance.hide=true
+    cap_add:
+    - NET_ADMIN
+    - SYS_ADMIN
+    devices:
+    - /dev/net/tun
+    volumes:
+    - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
+    environment:
+    - ZEROTIER_NETWORK_ID=${ZEROTIER_NETWORK_ID}
+    networks:
+    - homelab_net
+    depends_on:
+      zerotier-init:
+        condition: service_completed_successfully
+
+  # --- GLOBAL REVERSE PROXY ---
   caddy:
     labels:
-    - homepage.group=Infrastructure
-    - homepage.name=Caddy
-    - homepage.icon=mdi-server-network
-    - homepage.description=Reverse proxy + auto-TLS
-    - homepage.href=https://caddy.${DUCKDNS_DOMAIN:-localhost}
+    - glance.hide=true
     profiles: ["system"]
     build:
       context: ./caddy
@@ -68,7 +109,62 @@ services:
         limits:
           memory: 512M
 
-  # --- WATCHTOWER (auto-update containers) ---
+  # --- FILEBROWSER QUANTUM ---
+  filebrowser-quantum:
+    labels:
+    - homepage.group=Infrastructure
+    - homepage.name=FileBrowser
+    - homepage.icon=si-filebrowser
+    - homepage.description=Web file manager
+    - homepage.href=https://files.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["system"]
+    image: gtstef/filebrowser:1.3.3-stable
+    container_name: filebrowser-quantum
+    restart: unless-stopped
+    environment:
+    - FB_BASEURL=/
+    ports:
+    - "${FILEBROWSER_QUANTUM_PORT:-8090}:80"
+    volumes:
+    - ${FILEBROWSER_DATA:-../services-data/system/filebrowser-quantum}:/config
+    - ${FILEBROWSER_FILES:-../services-data/public}:/srv
+    networks:
+    - homelab_net
+
+  # --- OLLAMA ---
+  ollama:
+    profiles: ["system"]
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    labels:
+    - glance.hide=true
+    environment:
+    - OLLAMA_ORIGINS=*
+    - OLLAMA_HOST=0.0.0.0
+    - OLLAMA_KEEP_ALIVE=24h
+    - OLLAMA_API_KEY=${OLLAMA_API_KEY:-localhost}
+    ports:
+    - "11434:11434"
+    volumes:
+    - ${OLLAMA_DATA:-../services-data/system/ollama}:/root/.ollama
+    networks:
+    - homelab_net
+
+  # --- FLARESOLVERR ---
+  flaresolverr:
+    profiles: ["system"]
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+    - LOG_LEVEL=info
+    ports:
+    - "${FLARESOLVERR_PORT:-8191}:8191"
+    networks:
+    - homelab_net
+
+  # --- WATCHTOWER ---
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
@@ -84,120 +180,99 @@ services:
     networks:
     - homelab_net
 
-  # --- UPTIME KUMA ---
-  uptime-kuma:
-    labels:
-    - homepage.group=Infrastructure
-    - homepage.name=Uptime Kuma
-    - homepage.icon=mdi-heart-pulse
-    - homepage.description=Uptime monitor
-    - homepage.href=https://status.${DUCKDNS_DOMAIN:-localhost}
+  # --- RUSTDESK HBBS ---
+  rustdesk-hbbs:
     profiles: ["system"]
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbs
     restart: unless-stopped
+    labels:
+    - glance.hide=true
+    command: hbbs
     volumes:
-    - ${UPTIME_KUMA_DATA_PATH:-../services-data/system/uptime-kuma}:/app/data
-    - /var/run/docker.sock:/var/run/docker.sock
+    - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
     ports:
-    - "${UPTIME_KUMA_PORT:-3001}:3001"
+    - "21115:21115"
+    - "21116:21116"
+    - "21116:21116/udp"
+    - "21118:21118"
     networks:
     - homelab_net
 
-  # --- DOZZLE INIT (creates admin user) ---
-  dozzle-init:
+  # --- RUSTDESK HBBR ---
+  rustdesk-hbbr:
     profiles: ["system"]
-    image: docker:cli
-    container_name: dozzle-init
-    restart: "no"
-    depends_on:
-      dozzle:
-        condition: service_completed_successfully
-    volumes:
-    - ../services-data/system/dozzle:/data
-    entrypoint: /bin/sh
-    command:
-    - -c
-    - |
-      if ! docker ps -a --format '{{.Names}}' | grep -q '^dozzle$$'; then
-        echo "dozzle container not yet created; skipping user bootstrap."
-        exit 0
-      fi
-      if docker exec dozzle test -f /data/users.yaml; then
-        echo "dozzle users.yaml exists. Skipping."
-        exit 0
-      fi
-      echo "Bootstrapping dozzle admin user..."
-      docker exec dozzle /dozzle generate "$${DOZZLE_USER}" --email "$${DOZZLE_EMAIL}" --password "$${DOZZLE_PASSWORD}" --name "operator" --role admin
-      echo "dozzle admin user created."
-
-  # --- DOZZLE (live container logs) ---
-  dozzle:
-    labels:
-    - homepage.group=Infrastructure
-    - homepage.name=Dozzle
-    - homepage.icon=mdi-text-box-search
-    - homepage.description=Container log viewer
-    - homepage.href=https://logs.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["system"]
-    image: amir20/dozzle:latest
-    container_name: dozzle
+    image: rustdesk/rustdesk-server:latest
+    container_name: rustdesk-hbbr
     restart: unless-stopped
+    command: hbbr
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:ro
-    - ../services-data/system/dozzle:/data
+    - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
     ports:
-    - "${DOZZLE_PORT:-8888}:8080"
+    - "21117:21117"
+    - "21119:21119"
     networks:
     - homelab_net
 
-  # --- NETALERTX ---
-  netalertx:
+  # --- UPSNAP ---
+  upsnap:
+    profiles: ["system"]
+    image: ghcr.io/seriousm4x/upsnap:latest
+    container_name: upsnap
+    restart: unless-stopped
+    environment:
+    - UPSNAP_HTTP_LISTEN=0.0.0.0:8090
+    volumes:
+    - ${UPSNAP_DATA_PATH:-../services-data/system/upsnap}:/app/pb_data
+    ports:
+    - "${UPSNAP_PORT:-8090}:8090"
+    networks:
+    - homelab_net
+
+  # --- NTFY ---
+  ntfy:
     labels:
     - homepage.group=Infrastructure
-    - homepage.name=NetAlertX
-    - homepage.icon=mdi-network
-    - homepage.description=Network scanner / presence
-    - homepage.href=https://netalertx.${DUCKDNS_DOMAIN:-localhost}
+    - homepage.name=ntfy
+    - homepage.icon=mdi-bell-ring
+    - homepage.description=Notification pub/sub
+    - homepage.href=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
-    image: jokobsk/netalertx:latest
-    container_name: netalertx
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
     restart: unless-stopped
-    network_mode: host
-    privileged: true
-    tmpfs:
-    - /tmp:rw,nosuid,nodev,size=256m
+    command: serve
     environment:
     - TZ=${TZ:-Europe/Kyiv}
-    - GR_TZ=${TZ:-Europe/Kyiv}
+    - NTFY_BASE_URL=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
+    - NTFY_AUTH_DEFAULT_ACCESS=deny-all
+    - NTFY_ENABLE_LOGIN=true
+    - NTFY_BEHIND_PROXY=true
     volumes:
-    - ${NETALERTX_DATA_PATH:-../services-data/system/netalertx}:/data
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-
-  # --- GLANCES (system monitor) ---
-  glances:
-    labels:
-    - homepage.group=Infrastructure
-    - homepage.name=Glances
-    - homepage.icon=mdi-monitor-eye
-    - homepage.description=System monitor
-    - homepage.href=https://glances.${DUCKDNS_DOMAIN:-localhost}
-    profiles: ["system"]
-    image: nicolargo/glances:latest
-    container_name: glances
-    restart: unless-stopped
-    pid: host
-    privileged: true
-    environment:
-    - GLANCES_OPT=-w
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock:ro
-    - ${GLANCES_DATA_PATH:-../services-data/system/glances}:/glances/conf
+    - ${NTFY_CACHE:-../services-data/system/ntfy/cache}:/var/cache/ntfy
+    - ${NTFY_AUTH:-../services-data/system/ntfy/auth}:/var/lib/ntfy
+    - ${NTFY_CONFIG:-../services-data/system/ntfy/config}:/etc/ntfy
     ports:
-    - "${GLANCES_PORT:-61208}:61208"
+    - "${NTFY_PORT:-2586}:80"
+    networks:
+    - homelab_net
+
+  # --- MINECRAFT ---
+  minecraft:
+    profiles: ["system"]
+    image: itzg/minecraft-server:latest
+    container_name: minecraft
+    restart: unless-stopped
+    labels:
+    - glance.hide=true
+    ports:
+    - "${MINECRAFT_PORT:-25565}:25565"
+    environment:
+    - EULA=TRUE
+    - TYPE=PAPER
+    - DIFFICULTY=normal
+    volumes:
+    - ${MINECRAFT_DATA:-../services-data/system/minecraft}:/data
     networks:
     - homelab_net
 

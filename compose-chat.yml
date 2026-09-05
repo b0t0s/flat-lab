@@ -1,6 +1,29 @@
 services:
 
-  # --- SNIKKET PROXY (web reverse proxy for Snikket web clients) ---
+  # --- OPEN-WEBUI ---
+  open-webui:
+    labels:
+    - homepage.group=Chat & Messaging
+    - homepage.name=Open WebUI
+    - homepage.icon=mdi-robot
+    - homepage.description=LLM chat UI
+    - homepage.href=https://ai.${DUCKDNS_DOMAIN:-localhost}
+    profiles: ["chat"]
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+    - "${OPEN_WEBUI_HOST_PORT:-3020}:8080"
+    volumes:
+    - ${OPEN_WEBUI_DATA:-../services-data/system/open-webui}:/app/backend/data
+    networks:
+    - homelab_net
+    environment:
+      - TZ=Europe/Kyiv
+      - ENABLE_SIGNUP=True
+      - OLLAMA_BASE_URL=http://ollama:11434        
+
+  # --- SNIKKET PROXY ---
   snikket-proxy:
     profiles: ["chat"]
     container_name: snikket-proxy
@@ -55,7 +78,6 @@ services:
     restart: unless-stopped
 
   # --- CONVERSE.JS (XMPP web client, alt entrypoint) ---
-# --- CONVERSE.JS (XMPP web client, alt entrypoint) ---
   conversejs:
     labels:
     - homepage.group=Chat & Messaging

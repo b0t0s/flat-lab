@@ -1,22 +1,16 @@
 include:
   - compose-system.yml
   - compose-dashboard.yml
-  - compose-network.yml
-  - compose-media.yml
-  - compose-photos.yml
-  - compose-knowledge.yml
-  - compose-secrets.yml
-  - compose-finance.yml
-  - compose-productivity.yml
-  - compose-dev.yml
-  - compose-smarthome.yml
-  - compose-family.yml
-  - compose-medical.yml
-  - compose-chat.yml
-  - compose-paas.yml
   - compose-monitor.yml
-  - compose-bookmarks.yml
   - compose-tools.yml
+  - compose-dev.yml
+  - compose-secrets.yml
+  - compose-smarthome.yml
+  - compose-knowledge.yml
+  - compose-productivity.yml
+  - compose-media.yml
+  - compose-irl.yml
+  - compose-chat.yml
 
 networks:
   homelab_net:

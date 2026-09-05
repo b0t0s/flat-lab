@@ -41,15 +41,9 @@ layout:
   Development:
     style: row
     columns: 3
-  Sharing:
-    style: row
-    columns: 4
   Chat & Messaging:
     style: row
     columns: 4
-  Downloads:
-    style: row
-    columns: 3
   Secrets:
     style: row
     columns: 2
