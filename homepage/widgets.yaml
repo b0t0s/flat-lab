@@ -1,0 +1,10 @@
+---
+# Widget definitions: search bar, resources, info.
+# Reference: https://gethomepage.dev/widgets/
+- search:
+    provider: custom
+    url: https://search.${DUCKDNS_DOMAIN:-localhost}/search?q=
+- resources:
+    cpu: true
+    memory: true
+    disk: /

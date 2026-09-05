@@ -14,12 +14,12 @@ services:
     container_name: linkwarden-meilisearch
     restart: unless-stopped
     environment:
-      - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
-      - MEILI_ENV=production
+    - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
+    - MEILI_ENV=production
     volumes:
-      - ${LINKWARDEN_MEILI_DATA:-../services-data/system/linkwarden/meilisearch}:/meili_data
+    - ${LINKWARDEN_MEILI_DATA:-../services-data/system/linkwarden/meilisearch}:/meili_data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- LINKWARDEN POSTGRES ---
   linkwarden-db:
@@ -28,80 +28,78 @@ services:
     container_name: linkwarden-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=linkwarden
-      - POSTGRES_PASSWORD=${LINKWARDEN_DB_PASSWORD}
-      - POSTGRES_DB=linkwarden
+    - POSTGRES_USER=linkwarden
+    - POSTGRES_PASSWORD=${LINKWARDEN_DB_PASSWORD}
+    - POSTGRES_DB=linkwarden
     volumes:
-      - ${LINKWARDEN_DB_DATA:-../services-data/system/linkwarden/postgres}:/var/lib/postgresql/data
+    - ${LINKWARDEN_DB_DATA:-../services-data/system/linkwarden/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- LINKWARDEN (bookmark archive with full-page preservation) ---
   linkwarden:
     labels:
-      - homepage.group=Bookmarks
-      - homepage.name=linkwarden
-      - homepage.icon=linkwarden
-      - homepage.description=Bookmark archive + full-page preservation
-      - homepage.href=https://links.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Sharing
+    - homepage.name=Linkwarden
+    - homepage.icon=mdi-link-variant
+    - homepage.description=Bookmark manager (collaborative)
+    - homepage.href=https://links.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["bookmarks"]
     image: ghcr.io/linkwarden/linkwarden:latest
     container_name: linkwarden
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://linkwarden:${LINKWARDEN_DB_PASSWORD}@linkwarden-db:5432/linkwarden
+    - DATABASE_URL=postgresql://linkwarden:${LINKWARDEN_DB_PASSWORD}@linkwarden-db:5432/linkwarden
       # Linkwarden source reads MEILI_HOST (NOT MEILI_URL). MEILI_URL is accepted by older versions but the worker crashes if MEILI_HOST is unset (falls back to http://meilisearch:7700 which doesn't exist).
       # See: packages/lib/meilisearchClient.ts in upstream repo.
-      - MEILI_HOST=http://linkwarden-meilisearch:7700
-      - MEILI_URL=http://linkwarden-meilisearch:7700
-      - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
-      - NEXTAUTH_SECRET=${LINKWARDEN_SECRET}
-      - NEXTAUTH_URL=https://links.${DUCKDNS_DOMAIN:-localhost}
-      - STORAGE_FOLDER=/data/data
+    - MEILI_HOST=http://linkwarden-meilisearch:7700
+    - MEILI_URL=http://linkwarden-meilisearch:7700
+    - MEILI_MASTER_KEY=${LINKWARDEN_MEILI_KEY}
+    - NEXTAUTH_SECRET=${LINKWARDEN_SECRET}
+    - NEXTAUTH_URL=https://links.${DUCKDNS_DOMAIN:-localhost}
+    - STORAGE_FOLDER=/data/data
     depends_on:
-      - linkwarden-db
-      - linkwarden-meilisearch
+    - linkwarden-db
+    - linkwarden-meilisearch
     ports:
-      - "${LINKWARDEN_PORT:-3009}:3000"
+    - "${LINKWARDEN_PORT:-3009}:3000"
     volumes:
       # Mount a sub-path so the image's /data build artifacts (apps/, node_modules/, packages/, prisma schema) stay accessible. Only the image's own persistent sub-dir /data/data gets the host volume.
-      - ${LINKWARDEN_DATA:-../services-data/system/linkwarden/data}/data:/data/data
+    - ${LINKWARDEN_DATA:-../services-data/system/linkwarden/data}/data:/data/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KARAKEEP (bookmark manager with full-page archival) ---
   # Stack: Node.js + Postgres + Redis + Meili search.
   karakeep:
     labels:
-      - homepage.group=Bookmarks
-      - homepage.name=karakeep
-      - homepage.icon=karakeep
-      - homepage.description=Bookmark manager + archival
-      - homepage.href=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Sharing
+    - homepage.name=Karakeep
+    - homepage.icon=mdi-bookmark-multiple
+    - homepage.description=Bookmark + read-later
+    - homepage.href=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["bookmarks"]
     image: ghcr.io/karakeep-dev/karakeep:latest
     container_name: karakeep
     restart: unless-stopped
     depends_on:
-      - karakeep-db
-      - karakeep-redis
-      - karakeep-meilisearch
+    - karakeep-db
+    - karakeep-redis
+    - karakeep-meilisearch
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=postgres://karakeep:${KARAKEEP_DB_PASSWORD}@karakeep-db:5432/karakeep
-      - REDIS_URL=redis://karakeep-redis:6379
-      - NEXTAUTH_SECRET=${KARAKEEP_SECRET}
-      - NEXTAUTH_URL=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
-      - DATA_DIR=/data
-      - MEILI_HOST=http://karakeep-meilisearch:7700
-      - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
+    - NODE_ENV=production
+    - PORT=3000
+    - DATABASE_URL=postgres://karakeep:${KARAKEEP_DB_PASSWORD}@karakeep-db:5432/karakeep
+    - REDIS_URL=redis://karakeep-redis:6379
+    - NEXTAUTH_SECRET=${KARAKEEP_SECRET}
+    - NEXTAUTH_URL=https://karakeep.${DUCKDNS_DOMAIN:-localhost}
+    - DATA_DIR=/data
+    - MEILI_HOST=http://karakeep-meilisearch:7700
+    - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
     ports:
-      - "${KARAKEEP_PORT:-3505}:3000"
+    - "${KARAKEEP_PORT:-3505}:3000"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KARAKEEP POSTGRES ---
   karakeep-db:
@@ -110,13 +108,13 @@ services:
     container_name: karakeep-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=karakeep
-      - POSTGRES_USER=karakeep
-      - POSTGRES_PASSWORD=${KARAKEEP_DB_PASSWORD}
+    - POSTGRES_DB=karakeep
+    - POSTGRES_USER=karakeep
+    - POSTGRES_PASSWORD=${KARAKEEP_DB_PASSWORD}
     volumes:
-      - ${KARAKEEP_DB_DATA:-../services-data/system/karakeep/postgres}:/var/lib/postgresql/data
+    - ${KARAKEEP_DB_DATA:-../services-data/system/karakeep/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KARAKEEP REDIS ---
   karakeep-redis:
@@ -125,7 +123,7 @@ services:
     container_name: karakeep-redis
     restart: unless-stopped
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KARAKEEP MEILISEARCH ---
   karakeep-meilisearch:
@@ -134,12 +132,12 @@ services:
     container_name: karakeep-meilisearch
     restart: unless-stopped
     environment:
-      - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
-      - MEILI_ENV=production
+    - MEILI_MASTER_KEY=${KARAKEEP_MEILI_KEY}
+    - MEILI_ENV=production
     volumes:
-      - ${KARAKEEP_MEILI_DATA:-../services-data/system/karakeep/meilisearch}:/meili_data
+    - ${KARAKEEP_MEILI_DATA:-../services-data/system/karakeep/meilisearch}:/meili_data
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

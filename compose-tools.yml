@@ -3,33 +3,32 @@ services:
   # --- STIRLING-PDF (PDF toolkit, 50+ operations) ---
   stirling-pdf:
     labels:
-      - homepage.group=Tools
-      - homepage.name=stirling-pdf
-      - homepage.icon=stirling-pdf
-      - homepage.description=PDF toolkit (50+ operations)
-      - homepage.href=https://pdf.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Development
+    - homepage.name=Stirling PDF
+    - homepage.icon=mdi-file-pdf-box
+    - homepage.description=PDF tools (merge/split/convert)
+    - homepage.href=https://pdf.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["tools"]
     image: stirlingtools/stirling-pdf:latest
     container_name: stirling-pdf
     restart: unless-stopped
     environment:
-      - LANGS=en_US
-      - SYSTEM_DEFAULTLOCALE=en-US
-      - UI_APPNAME=Stirling PDF
-      - UI_HOMEDESCRIPTION=Internal PDF toolkit
-      - SECURITY_ENABLELOGIN=${STIRLING_SECURITY_ENABLELOGIN:-false}
-      - SECURITY_INITIALLOGIN_USERNAME=${STIRLING_USER}
-      - SECURITY_INITIALLOGIN_PASSWORD=${STIRLING_PASSWORD}
+    - LANGS=en_US
+    - SYSTEM_DEFAULTLOCALE=en-US
+    - UI_APPNAME=Stirling PDF
+    - UI_HOMEDESCRIPTION=Internal PDF toolkit
+    - SECURITY_ENABLELOGIN=${STIRLING_SECURITY_ENABLELOGIN:-false}
+    - SECURITY_INITIALLOGIN_USERNAME=${STIRLING_USER}
+    - SECURITY_INITIALLOGIN_PASSWORD=${STIRLING_PASSWORD}
     ports:
-      - "${STIRLING_PORT:-8082}:8080"
+    - "${STIRLING_PORT:-8082}:8080"
     volumes:
-      - ${STIRLING_TESSDATA:-../services-data/system/stirling-pdf/tessdata}:/usr/share/tessdata
-      - ${STIRLING_CONFIGS:-../services-data/system/stirling-pdf/configs}:/configs
-      - ${STIRLING_CUSTOM:-../services-data/system/stirling-pdf/customFiles}:/customFiles
-      - ${STIRLING_LOGS:-../services-data/system/stirling-pdf/logs}:/logs
+    - ${STIRLING_TESSDATA:-../services-data/system/stirling-pdf/tessdata}:/usr/share/tessdata
+    - ${STIRLING_CONFIGS:-../services-data/system/stirling-pdf/configs}:/configs
+    - ${STIRLING_CUSTOM:-../services-data/system/stirling-pdf/customFiles}:/customFiles
+    - ${STIRLING_LOGS:-../services-data/system/stirling-pdf/logs}:/logs
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- SEARXNG REDIS (optional cache) ---
   searxng-redis:
@@ -38,30 +37,29 @@ services:
     container_name: searxng-redis
     restart: unless-stopped
     volumes:
-      - ${SEARXNG_REDIS_DATA:-../services-data/system/searxng/redis}:/data
+    - ${SEARXNG_REDIS_DATA:-../services-data/system/searxng/redis}:/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- SEARXNG (metasearch engine) ---
   searxng:
     labels:
-      - homepage.group=Tools
-      - homepage.name=searxng
-      - homepage.icon=searxng
-      - homepage.description=Metasearch engine
-      - homepage.href=https://search.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=SearXNG
+    - homepage.icon=mdi-magnify
+    - homepage.description=Metasearch engine
+    - homepage.href=https://search.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["tools"]
     image: searxng/searxng:latest
     container_name: searxng
     restart: unless-stopped
     environment:
-      - SEARXNG_SECRET=${SEARXNG_SECRET}
-      - SEARXNG_REDIS_URL=redis://searxng-redis:6379/0
+    - SEARXNG_SECRET=${SEARXNG_SECRET}
+    - SEARXNG_REDIS_URL=redis://searxng-redis:6379/0
     ports:
-      - "${SEARXNG_PORT:-8888}:8080"
+    - "${SEARXNG_PORT:-8888}:8080"
     volumes:
-      - ${SEARXNG_DATA:-../services-data/system/searxng/data}:/etc/searxng
+    - ${SEARXNG_DATA:-../services-data/system/searxng/data}:/etc/searxng
     # Switchable DNS override for dev-PC testing.
     # On the Pi (default), DNS1/DNS2 are unset → Docker falls back to host's
     # resolv.conf (AdGuard at 192.168.0.2), which works fine.
@@ -71,36 +69,35 @@ services:
     # deployment is unaffected.
     # See docs/ignored/docker-dns-decision-2026-08.md
     dns:
-      - "${DNS1:-}"
-      - "${DNS2:-}"
+    - "${DNS1:-}"
+    - "${DNS2:-}"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KUTT (URL shortener) ---
   kutt:
     labels:
-      - homepage.group=Tools
-      - homepage.name=kutt
-      - homepage.icon=kutt
-      - homepage.description=URL shortener
-      - homepage.href=https://go.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Kutt
+    - homepage.icon=mdi-link-variant
+    - homepage.description=URL shortener
+    - homepage.href=https://go.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["tools"]
     image: ghcr.io/thedevs-network/kutt:latest
     container_name: kutt
     restart: unless-stopped
     depends_on:
-      - kutt-db
+    - kutt-db
     environment:
-      - PORT=3000
-      - DATABASE_URL=postgres://kutt:${KUTT_DB_PASSWORD}@kutt-db:5432/kutt
-      - REDIS_URL=redis://kutt-redis:6379
-      - DEFAULT_DOMAIN=go.${DUCKDNS_DOMAIN:-localhost}
-      - LINK_LENGTH=6
+    - PORT=3000
+    - DATABASE_URL=postgres://kutt:${KUTT_DB_PASSWORD}@kutt-db:5432/kutt
+    - REDIS_URL=redis://kutt-redis:6379
+    - DEFAULT_DOMAIN=go.${DUCKDNS_DOMAIN:-localhost}
+    - LINK_LENGTH=6
     ports:
-      - "${KUTT_PORT:-8075}:3000"
+    - "${KUTT_PORT:-8075}:3000"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KUTT DB (postgres) ---
   kutt-db:
@@ -109,13 +106,13 @@ services:
     container_name: kutt-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=kutt
-      - POSTGRES_USER=kutt
-      - POSTGRES_PASSWORD=${KUTT_DB_PASSWORD}
+    - POSTGRES_DB=kutt
+    - POSTGRES_USER=kutt
+    - POSTGRES_PASSWORD=${KUTT_DB_PASSWORD}
     volumes:
-      - ${KUTT_DB_DATA:-../services-data/system/kutt/postgres}:/var/lib/postgresql/data
+    - ${KUTT_DB_DATA:-../services-data/system/kutt/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KUTT REDIS ---
   kutt-redis:
@@ -124,7 +121,7 @@ services:
     container_name: kutt-redis
     restart: unless-stopped
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

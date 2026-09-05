@@ -2,30 +2,24 @@ services:
 
   # --- AUTOMATIC DOCKER PRUNER ---
   docker-pruner:
-    labels:
-      - homepage.group=system
-      - homepage.name=docker-pruner
-      - homepage.icon=recycle
-      - homepage.description=Auto-clean dangling images
-      - homepage.href=https://prune.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
     profiles: ["system"]
     image: docker:cli
     container_name: docker-pruner
     restart: unless-stopped
+    labels:
+    - glance.hide=true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
     command: /bin/sh -c "while true; do sleep 86400; echo 'Starting daily prune...'; docker system prune -af --filter 'until=24h'; docker builder prune -af; echo 'Prune complete.'; done"
 
   # --- GLOBAL REVERSE PROXY (CADDY) ---
   caddy:
     labels:
-      - homepage.group=system
-      - homepage.name=caddy
-      - homepage.icon=caddy
-      - homepage.description=Reverse proxy + auto-TLS
-      - homepage.href=https://caddy.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Caddy
+    - homepage.icon=mdi-server-network
+    - homepage.description=Reverse proxy + auto-TLS
+    - homepage.href=https://caddy.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     build:
       context: ./caddy
@@ -33,43 +27,42 @@ services:
     container_name: caddy_gateway
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+    - "80:80"
+    - "443:443"
     environment:
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-your_duckdns_token_here}
-      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}
+    - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-your_duckdns_token_here}
+    - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-your-subdomain.duckdns.org}
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ../services-data/system/caddy/data:/data
-      - ../services-data/system/caddy/config:/config
+    - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+    - ../services-data/system/caddy/data:/data
+    - ../services-data/system/caddy/config:/config
     networks:
-      - homelab_net
+    - homelab_net
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+    - "host.docker.internal:host-gateway"
 
   # --- ADGUARD HOME ---
   adguardhome:
     labels:
-      - homepage.group=system
-      - homepage.name=adguardhome
-      - homepage.icon=adguard
-      - homepage.description=DNS sinkhole + ad blocker
-      - homepage.href=https://adguard.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=AdGuard
+    - homepage.icon=mdi-shield-check
+    - homepage.description=DNS sinkhole + ad blocker
+    - homepage.href=https://adguard.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     image: adguard/adguardhome:latest
     container_name: adguardhome
     restart: unless-stopped
     volumes:
-      - ${ADGUARD_WORKDIR:-../services-data/system/adguardhome/workdir}:/opt/adguardhome/work
-      - ${ADGUARD_CONFDIR:-../services-data/system/adguardhome/confdir}:/opt/adguardhome/conf
+    - ${ADGUARD_WORKDIR:-../services-data/system/adguardhome/workdir}:/opt/adguardhome/work
+    - ${ADGUARD_CONFDIR:-../services-data/system/adguardhome/confdir}:/opt/adguardhome/conf
     ports:
-      - "${ADGUARD_DNS_TCP_PORT:-53}:53/tcp"
-      - "${ADGUARD_DNS_UDP_PORT:-53}:53/udp"
-      - "${ADGUARD_HTTP_PORT:-81}:81/tcp"
-      - "${ADGUARD_WEB_PORT:-3000}:3000/tcp"
+    - "${ADGUARD_DNS_TCP_PORT:-53}:53/tcp"
+    - "${ADGUARD_DNS_UDP_PORT:-53}:53/udp"
+    - "${ADGUARD_HTTP_PORT:-81}:81/tcp"
+    - "${ADGUARD_WEB_PORT:-3000}:3000/tcp"
     networks:
-      - homelab_net
+    - homelab_net
     deploy:
       resources:
         limits:
@@ -77,55 +70,39 @@ services:
 
   # --- WATCHTOWER (auto-update containers) ---
   watchtower:
-    labels:
-      - homepage.group=system
-      - homepage.name=watchtower
-      - homepage.icon=watchtower
-      - homepage.description=Auto-updates containers
-      - homepage.href=https://updates.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
-    profiles: ["system"]
     image: containrrr/watchtower:latest
     container_name: watchtower
+    profiles: ["system"]
     restart: unless-stopped
+    labels:
+    - glance.hide=true
     command: --cleanup --schedule "0 0 4 * * *" --label-enable
-    # Watchtower v1.7.1 embeds an outdated Docker SDK that requests API
-    # client version 1.25. Modern Docker Engine daemons (>= 29.0) require
-    # client >= 1.40 and reject 1.25 with:
-    #   "Error response from daemon: client version 1.25 is too old.
-    #    Minimum supported API version is 1.40, please upgrade your client."
-    # Setting DOCKER_API_VERSION to a value the embedded SDK can speak
-    # (1.40 is the modern minimum) forces a compatible handshake.
-    # Upstream watchtower is archived (Dec 2025) and will not fix this.
-    # When a maintained fork or replacement (e.g. freshdock) is chosen,
-    # this var can be removed.
     environment:
-      - DOCKER_API_VERSION=1.40
+    - DOCKER_API_VERSION=1.40
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- UPTIME KUMA ---
   uptime-kuma:
     labels:
-      - homepage.group=system
-      - homepage.name=uptime-kuma
-      - homepage.icon=uptime-kuma
-      - homepage.description=Uptime monitor
-      - homepage.href=https://uptime.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Uptime Kuma
+    - homepage.icon=mdi-heart-pulse
+    - homepage.description=Uptime monitor
+    - homepage.href=https://status.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     image: louislam/uptime-kuma:1
     container_name: uptime-kuma
     restart: unless-stopped
     volumes:
-      - ${UPTIME_KUMA_DATA_PATH:-../services-data/system/uptime-kuma}:/app/data
-      - /var/run/docker.sock:/var/run/docker.sock
+    - ${UPTIME_KUMA_DATA_PATH:-../services-data/system/uptime-kuma}:/app/data
+    - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "${UPTIME_KUMA_PORT:-3001}:3001"
+    - "${UPTIME_KUMA_PORT:-3001}:3001"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- DOZZLE INIT (creates admin user) ---
   dozzle-init:
@@ -137,53 +114,51 @@ services:
       dozzle:
         condition: service_completed_successfully
     volumes:
-      - ../services-data/system/dozzle:/data
+    - ../services-data/system/dozzle:/data
     entrypoint: /bin/sh
     command:
-      - -c
-      - |
-        if ! docker ps -a --format '{{.Names}}' | grep -q '^dozzle$$'; then
-          echo "dozzle container not yet created; skipping user bootstrap."
-          exit 0
-        fi
-        if docker exec dozzle test -f /data/users.yaml; then
-          echo "dozzle users.yaml exists. Skipping."
-          exit 0
-        fi
-        echo "Bootstrapping dozzle admin user..."
-        docker exec dozzle /dozzle generate "$${DOZZLE_USER}" --email "$${DOZZLE_EMAIL}" --password "$${DOZZLE_PASSWORD}" --name "operator" --role admin
-        echo "dozzle admin user created."
+    - -c
+    - |
+      if ! docker ps -a --format '{{.Names}}' | grep -q '^dozzle$$'; then
+        echo "dozzle container not yet created; skipping user bootstrap."
+        exit 0
+      fi
+      if docker exec dozzle test -f /data/users.yaml; then
+        echo "dozzle users.yaml exists. Skipping."
+        exit 0
+      fi
+      echo "Bootstrapping dozzle admin user..."
+      docker exec dozzle /dozzle generate "$${DOZZLE_USER}" --email "$${DOZZLE_EMAIL}" --password "$${DOZZLE_PASSWORD}" --name "operator" --role admin
+      echo "dozzle admin user created."
 
   # --- DOZZLE (live container logs) ---
   dozzle:
     labels:
-      - homepage.group=system
-      - homepage.name=dozzle
-      - homepage.icon=dozzle
-      - homepage.description=Real-time docker logs
-      - homepage.href=https://dozzle.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Dozzle
+    - homepage.icon=mdi-text-box-search
+    - homepage.description=Container log viewer
+    - homepage.href=https://logs.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     image: amir20/dozzle:latest
     container_name: dozzle
     restart: unless-stopped
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ../services-data/system/dozzle:/data
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ../services-data/system/dozzle:/data
     ports:
-      - "${DOZZLE_PORT:-8888}:8080"
+    - "${DOZZLE_PORT:-8888}:8080"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- NETALERTX ---
   netalertx:
     labels:
-      - homepage.group=system
-      - homepage.name=netalertx
-      - homepage.icon=netalertx
-      - homepage.description=Network scanner + device tracker
-      - homepage.href=https://netalertx.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=NetAlertX
+    - homepage.icon=mdi-network
+    - homepage.description=Network scanner / presence
+    - homepage.href=https://netalertx.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     image: jokobsk/netalertx:latest
     container_name: netalertx
@@ -191,12 +166,12 @@ services:
     network_mode: host
     privileged: true
     tmpfs:
-      - /tmp:rw,nosuid,nodev,size=256m
+    - /tmp:rw,nosuid,nodev,size=256m
     environment:
-      - TZ=${TZ:-Europe/Kyiv}
-      - GR_TZ=${TZ:-Europe/Kyiv}
+    - TZ=${TZ:-Europe/Kyiv}
+    - GR_TZ=${TZ:-Europe/Kyiv}
     volumes:
-      - ${NETALERTX_DATA_PATH:-../services-data/system/netalertx}:/data
+    - ${NETALERTX_DATA_PATH:-../services-data/system/netalertx}:/data
     deploy:
       resources:
         limits:
@@ -205,12 +180,11 @@ services:
   # --- GLANCES (system monitor) ---
   glances:
     labels:
-      - homepage.group=system
-      - homepage.name=glances
-      - homepage.icon=glances
-      - homepage.description=System monitor
-      - homepage.href=https://glances.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Glances
+    - homepage.icon=mdi-monitor-eye
+    - homepage.description=System monitor
+    - homepage.href=https://glances.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["system"]
     image: nicolargo/glances:latest
     container_name: glances
@@ -218,14 +192,14 @@ services:
     pid: host
     privileged: true
     environment:
-      - GLANCES_OPT=-w
+    - GLANCES_OPT=-w
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${GLANCES_DATA_PATH:-../services-data/system/glances}:/glances/conf
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ${GLANCES_DATA_PATH:-../services-data/system/glances}:/glances/conf
     ports:
-      - "${GLANCES_PORT:-61208}:61208"
+    - "${GLANCES_PORT:-61208}:61208"
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

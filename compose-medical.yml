@@ -7,76 +7,75 @@ services:
     container_name: openemr-db
     restart: unless-stopped
     command:
-      - mariadbd
-      - --character-set-server=utf8mb4
+    - mariadbd
+    - --character-set-server=utf8mb4
     environment:
-      - MYSQL_ROOT_PASSWORD=${OPENEMR_DB_ROOT_PASS}
-      - MYSQL_DATABASE=openemr
-      - MYSQL_USER=openemr
-      - MYSQL_PASSWORD=${OPENEMR_DB_PASS}
+    - MYSQL_ROOT_PASSWORD=${OPENEMR_DB_ROOT_PASS}
+    - MYSQL_DATABASE=openemr
+    - MYSQL_USER=openemr
+    - MYSQL_PASSWORD=${OPENEMR_DB_PASS}
     volumes:
-      - ${OPENEMR_DB_DATA:-../services-data/system/openemr-db}:/var/lib/mysql
+    - ${OPENEMR_DB_DATA:-../services-data/system/openemr-db}:/var/lib/mysql
     healthcheck:
       test:
-        - CMD
-        - /usr/local/bin/healthcheck.sh
-        - --su-mysql
-        - --connect
-        - --innodb_initialized
+      - CMD
+      - /usr/local/bin/healthcheck.sh
+      - --su-mysql
+      - --connect
+      - --innodb_initialized
       start_period: 1m
       start_interval: 10s
       interval: 1m
       timeout: 5s
       retries: 3
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- OPENEMR (medical records, HIPAA) ---
   openemr:
     labels:
-      - homepage.group=Medical
-      - homepage.name=openemr
-      - homepage.icon=openemr
-      - homepage.description=Medical records (HIPAA)
-      - homepage.href=https://openemr.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=OpenEMR
+    - homepage.icon=mdi-hospital
+    - homepage.description=Medical records (HIPAA)
+    - homepage.href=https://emr.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["medical"]
     image: openemr/openemr:8.2.0
     container_name: openemr
     restart: unless-stopped
     ports:
-      - "${OPENEMR_PORT:-8300}:80"
-      - "${OPENEMR_PORT:-8300}:443"
+    - "${OPENEMR_PORT:-8300}:80"
+    - "${OPENEMR_PORT:-8300}:443"
     volumes:
-      - ${OPENEMR_LOG:-../services-data/system/openemr/log}:/var/log
-      - ${OPENEMR_SITES:-../services-data/system/openemr/sites}:/var/www/localhost/htdocs/openemr/sites
+    - ${OPENEMR_LOG:-../services-data/system/openemr/log}:/var/log
+    - ${OPENEMR_SITES:-../services-data/system/openemr/sites}:/var/www/localhost/htdocs/openemr/sites
     environment:
-      - MYSQL_HOST=openemr-db
-      - MYSQL_ROOT_PASS=${OPENEMR_DB_ROOT_PASS}
-      - MYSQL_USER=openemr
-      - MYSQL_PASS=${OPENEMR_DB_PASS}
-      - OE_USER=${OPENEMR_ADMIN_USER}
-      - OE_PASS=${OPENEMR_ADMIN_PASS}
+    - MYSQL_HOST=openemr-db
+    - MYSQL_ROOT_PASS=${OPENEMR_DB_ROOT_PASS}
+    - MYSQL_USER=openemr
+    - MYSQL_PASS=${OPENEMR_DB_PASS}
+    - OE_USER=${OPENEMR_ADMIN_USER}
+    - OE_PASS=${OPENEMR_ADMIN_PASS}
     depends_on:
       openemr-db:
         condition: service_healthy
     healthcheck:
       test:
-        - CMD
-        - /usr/bin/curl
-        - --fail
-        - --insecure
-        - --location
-        - --show-error
-        - --silent
-        - https://localhost/meta/health/readyz
+      - CMD
+      - /usr/bin/curl
+      - --fail
+      - --insecure
+      - --location
+      - --show-error
+      - --silent
+      - https://localhost/meta/health/readyz
       start_period: 3m
       start_interval: 10s
       interval: 1m
       timeout: 5s
       retries: 3
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

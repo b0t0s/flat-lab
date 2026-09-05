@@ -3,72 +3,69 @@ services:
   # --- CODE-SERVER (VS Code in browser) ---
   code-server:
     labels:
-      - homepage.group=Dev
-      - homepage.name=code-server
-      - homepage.icon=code-server
-      - homepage.description=VS Code in browser
-      - homepage.href=https://code.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Development
+    - homepage.name=code-server
+    - homepage.icon=mdi-microsoft-visual-studio-code
+    - homepage.description=VS Code in browser
+    - homepage.href=https://code.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["dev"]
     image: linuxserver/code-server:latest
     container_name: code-server
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
-      - PASSWORD=${CODESERVER_PASSWORD}
-      - SUDO_PASSWORD=${CODESERVER_PASSWORD}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
+    - PASSWORD=${CODESERVER_PASSWORD}
+    - SUDO_PASSWORD=${CODESERVER_PASSWORD}
     ports:
-      - "${CODESERVER_PORT:-8443}:8443"
+    - "${CODESERVER_PORT:-8443}:8443"
     volumes:
-      - ${CODESERVER_DATA:-../services-data/system/code-server/config}:/config
-      - ${CODESERVER_PROJECTS:-../services-data/public}:/projects:rw
+    - ${CODESERVER_DATA:-../services-data/system/code-server/config}:/config
+    - ${CODESERVER_PROJECTS:-../services-data/public}:/projects:rw
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- ONEDEV (Git + CI/CD) ---
   onedev:
     labels:
-      - homepage.group=Dev
-      - homepage.name=onedev
-      - homepage.icon=onedev
-      - homepage.description=Git + CI/CD + Kanban
-      - homepage.href=https://git.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Development
+    - homepage.name=OneDev
+    - homepage.icon=mdi-git
+    - homepage.description=Git + CI/CD + Kanban
+    - homepage.href=https://git.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["dev"]
     image: 1dev/server:latest
     container_name: onedev
     restart: unless-stopped
     ports:
-      - "${ONEDEV_PORT1:-6610}:6610"
-      - "${ONEDEV_PORT2:-6611}:6611"
+    - "${ONEDEV_PORT1:-6610}:6610"
+    - "${ONEDEV_PORT2:-6611}:6611"
     volumes:
-      - ${ONEDEV_DATA:-../services-data/system/onedev}:/opt/onedev
-      - /var/run/docker.sock:/var/run/docker.sock
+    - ${ONEDEV_DATA:-../services-data/system/onedev}:/opt/onedev
+    - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- OLIVETIN (server control panel) ---
   olivetin:
     labels:
-      - homepage.group=Dev
-      - homepage.name=olivetin
-      - homepage.icon=olivetin
-      - homepage.description=Web button panel for shell
-      - homepage.href=https://actions.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Development
+    - homepage.name=OliveTin
+    - homepage.icon=mdi-gamepad
+    - homepage.description=Web button panel for shell
+    - homepage.href=https://control.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["dev"]
     image: jamesread/olivetin:latest
     container_name: olivetin
     restart: unless-stopped
     ports:
-      - "${OLIVETIN_PORT:-1337}:1337"
+    - "${OLIVETIN_PORT:-1337}:1337"
     volumes:
-      - ${OLIVETIN_DATA:-../services-data/system/olivetin}:/config
-      - /var/run/docker.sock:/var/run/docker.sock
+    - ${OLIVETIN_DATA:-../services-data/system/olivetin}:/config
+    - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

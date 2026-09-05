@@ -7,72 +7,62 @@ services:
     container_name: zerotier-init
     restart: "no"
     volumes:
-      - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
+    - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
     entrypoint: /bin/sh
     command:
-      - -c
-      - |
-        if [ ! -f /var/lib/zerotier-one/local.conf ]; then
-          echo "Configuring zerotier-one to listen on all interfaces..."
-          printf '{"settings":{"tcpListenAddress":"0.0.0.0:9993"}}\n' > /var/lib/zerotier-one/local.conf
-          echo "local.conf written."
-        else
-          echo "local.conf already exists. Skipping."
-        fi
+    - -c
+    - |
+      if [ ! -f /var/lib/zerotier-one/local.conf ]; then
+        echo "Configuring zerotier-one to listen on all interfaces..."
+        printf '{"settings":{"tcpListenAddress":"0.0.0.0:9993"}}\n' > /var/lib/zerotier-one/local.conf
+        echo "local.conf written."
+      else
+        echo "local.conf already exists. Skipping."
+      fi
 
   # --- ZEROTIER (mesh VPN) ---
   zerotier:
-    labels:
-      - homepage.group=Network
-      - homepage.name=zerotier
-      - homepage.icon=zerotier
-      - homepage.description=Mesh VPN client
-      - homepage.href=https://zerotier.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
-    profiles: ["network"]
     build:
       context: ./zerotier
       dockerfile: Dockerfile
     container_name: zerotier
+    profiles: ["network"]
     restart: unless-stopped
+    labels:
+    - glance.hide=true
     cap_add:
-      - NET_ADMIN
-      - SYS_ADMIN
+    - NET_ADMIN
+    - SYS_ADMIN
     devices:
-      - /dev/net/tun
+    - /dev/net/tun
     volumes:
-      - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
+    - ${ZEROTIER_DATA_PATH:-../services-data/system/zerotier}:/var/lib/zerotier-one
     environment:
-      - ZEROTIER_NETWORK_ID=${ZEROTIER_NETWORK_ID}
+    - ZEROTIER_NETWORK_ID=${ZEROTIER_NETWORK_ID}
     networks:
-      - homelab_net
+    - homelab_net
     depends_on:
       zerotier-init:
         condition: service_completed_successfully
 
   # --- RUSTDESK HBBS (signaling server) ---
   rustdesk-hbbs:
-    labels:
-      - homepage.group=Network
-      - homepage.name=rustdesk-hbbs
-      - homepage.icon=rustdesk
-      - homepage.description=RustDesk ID relay server
-      - homepage.href=https://rustdesk.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
     profiles: ["network"]
     image: rustdesk/rustdesk-server:latest
     container_name: rustdesk-hbbs
     restart: unless-stopped
+    labels:
+    - glance.hide=true
     command: hbbs
     volumes:
-      - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
+    - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
     ports:
-      - "21115:21115"
-      - "21116:21116"
-      - "21116:21116/udp"
-      - "21118:21118"
+    - "21115:21115"
+    - "21116:21116"
+    - "21116:21116/udp"
+    - "21118:21118"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- RUSTDESK HBBR (relay server) ---
   rustdesk-hbbr:
@@ -82,84 +72,75 @@ services:
     restart: unless-stopped
     command: hbbr
     volumes:
-      - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
+    - ${RUSTDESK_DATA_PATH:-../services-data/system/rustdesk}:/root
     ports:
-      - "21117:21117"
-      - "21119:21119"
+    - "21117:21117"
+    - "21119:21119"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- UPSNAP (Wake-on-LAN) ---
   upsnap:
-    labels:
-      - homepage.group=Network
-      - homepage.name=upsnap
-      - homepage.icon=upsnap
-      - homepage.description=Wake-on-LAN panel
-      - homepage.href=https://upsnap.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
     profiles: ["network"]
     image: ghcr.io/seriousm4x/upsnap:latest
     container_name: upsnap
     restart: unless-stopped
     environment:
-      - UPSNAP_HTTP_LISTEN=0.0.0.0:8090
+    - UPSNAP_HTTP_LISTEN=0.0.0.0:8090
     volumes:
-      - ${UPSNAP_DATA_PATH:-../services-data/system/upsnap}:/app/pb_data
+    - ${UPSNAP_DATA_PATH:-../services-data/system/upsnap}:/app/pb_data
     ports:
-      - "${UPSNAP_PORT:-8090}:8090"
+    - "${UPSNAP_PORT:-8090}:8090"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- WHOIS (domain/IP lookup service) ---
 # --- WHOIS (domain/IP lookup service) ---
   whois:
     labels:
-      - homepage.group=Network
-      - homepage.name=whois
-      - homepage.icon=whois
-      - homepage.description=WHOIS / RDAP lookup
-      - homepage.href=https://whois.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Whois
+    - homepage.icon=mdi-account-search
+    - homepage.description=WHOIS lookup
+    - homepage.href=https://whois.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["network"]
     image: ghcr.io/kincaidyang/whois:latest
     container_name: whois
     restart: unless-stopped
     environment:
-      - WHOIS_PORT=8043
-      - WHOIS_RATE_LIMIT=100
-      - WHOIS_LOG_LEVEL=info
-      - WHOIS_CACHE_EXPIRATION=3600
-      - WHOIS_NEGATIVE_CACHE_EXPIRATION=60
-      - WHOIS_REQUIRE_REDIS=false
-      - WHOIS_MEMORY_MAX_SIZE=10000
-      - WHOIS_MEMORY_CLEAN_INTERVAL=300
-      - WHOIS_AUTH_KEYS=${WHOIS_API_KEY}
+    - WHOIS_PORT=8043
+    - WHOIS_RATE_LIMIT=100
+    - WHOIS_LOG_LEVEL=info
+    - WHOIS_CACHE_EXPIRATION=3600
+    - WHOIS_NEGATIVE_CACHE_EXPIRATION=60
+    - WHOIS_REQUIRE_REDIS=false
+    - WHOIS_MEMORY_MAX_SIZE=10000
+    - WHOIS_MEMORY_CLEAN_INTERVAL=300
+    - WHOIS_AUTH_KEYS=${WHOIS_API_KEY}
     ports:
-      - "${WHOIS_PORT:-8043}:8043"
+    - "${WHOIS_PORT:-8043}:8043"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- MYSPEED (speed test history) ---
 # --- MYSPEED (speed test history) ---
   myspeed:
     labels:
-      - homepage.group=Network
-      - homepage.name=myspeed
-      - homepage.icon=speedtest
-      - homepage.description=Speedtest with history
-      - homepage.href=https://speedtest.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=MySpeed
+    - homepage.icon=mdi-speedometer
+    - homepage.description=Speed test tracker
+    - homepage.href=https://speed.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["network"]
     image: gnmyt/myspeed:latest
     container_name: myspeed
     restart: unless-stopped
     ports:
-      - "${MYSPEED_PORT:-5216}:5216"
+    - "${MYSPEED_PORT:-5216}:5216"
     volumes:
-      - ${MYSPEED_DATA_PATH:-../services-data/system/myspeed}:/config
+    - ${MYSPEED_DATA_PATH:-../services-data/system/myspeed}:/config
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

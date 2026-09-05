@@ -6,115 +6,111 @@ services:
   # supersync` (Fastify + Prisma + SQLite, default port 1900).
   super-productivity:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=super-productivity
-      - homepage.icon=superproductivity
-      - homepage.description=Task tracker (Supersync server)
-      - homepage.href=https://tasks.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Super Productivity
+    - homepage.icon=mdi-checkbox-marked-circle-outline
+    - homepage.description=Task tracker (Supersync server)
+    - homepage.href=https://tasks.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/super-productivity/supersync:latest
     container_name: super-productivity
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=1900
-      - DATA_DIR=/data
-      - RUN_MIGRATIONS_ON_STARTUP=true
-      - JWT_SECRET=${SUPERPRODUCTIVITY_SYNC_SECRET}
-      - LOG_LEVEL=info
-      - CORS_ENABLED=true
-      - CORS_ORIGINS=https://tasks.${DUCKDNS_DOMAIN:-localhost}
-      - WEBAUTHN_RP_NAME=Super Productivity
+    - NODE_ENV=production
+    - PORT=1900
+    - DATA_DIR=/data
+    - RUN_MIGRATIONS_ON_STARTUP=true
+    - JWT_SECRET=${SUPERPRODUCTIVITY_SYNC_SECRET}
+    - LOG_LEVEL=info
+    - CORS_ENABLED=true
+    - CORS_ORIGINS=https://tasks.${DUCKDNS_DOMAIN:-localhost}
+    - WEBAUTHN_RP_NAME=Super Productivity
     ports:
-      - "${SUPERPRODUCTIVITY_PORT:-5050}:1900"
+    - "${SUPERPRODUCTIVITY_PORT:-5050}:1900"
     volumes:
-      - ${SUPERPRODUCTIVITY_DATA:-../services-data/system/super-productivity}:/data
+    - ${SUPERPRODUCTIVITY_DATA:-../services-data/system/super-productivity}:/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- MANAGEMEALS (recipe manager) ---
   managemeals:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=managemeals
-      - homepage.icon=managemeals
-      - homepage.description=Recipe manager
-      - homepage.href=https://recipes.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=ManageMeals
+    - homepage.icon=mdi-silverware-fork-knife
+    - homepage.description=Recipe manager
+    - homepage.href=https://recipes.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/nightwhistler/managemeals:latest
     container_name: managemeals
     restart: unless-stopped
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8089
+    - ASPNETCORE_ENVIRONMENT=Production
+    - ASPNETCORE_URLS=http://+:8089
     ports:
-      - "${MANAGEMEALS_PORT:-8089}:8089"
+    - "${MANAGEMEALS_PORT:-8089}:8089"
     volumes:
-      - ${MANAGEMEALS_DATA:-../services-data/system/managemeals}:/app/data
+    - ${MANAGEMEALS_DATA:-../services-data/system/managemeals}:/app/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- 2FAUTH (TOTP token manager) ---
   twofauth:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=twofauth
-      - homepage.icon=twofauth
-      - homepage.description=2FA TOTP token manager
-      - homepage.href=https://2fa.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=2FAuth
+    - homepage.icon=si-authy
+    - homepage.description=2FA TOTP token manager
+    - homepage.href=https://2fa.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: 2fauth/2fauth:latest
     container_name: twofauth
     restart: unless-stopped
     environment:
-      - APP_ENV=production
-      - APP_KEY=${TWOFAUTH_APP_KEY}
-      - APP_URL=https://2fa.${DUCKDNS_DOMAIN:-localhost}
-      - DB_CONNECTION=sqlite
-      - LOG_CHANNEL=stderr
+    - APP_ENV=production
+    - APP_KEY=${TWOFAUTH_APP_KEY}
+    - APP_URL=https://2fa.${DUCKDNS_DOMAIN:-localhost}
+    - DB_CONNECTION=sqlite
+    - LOG_CHANNEL=stderr
     ports:
-      - "${TWOFAUTH_PORT:-8050}:8000"
+    - "${TWOFAUTH_PORT:-8050}:8000"
     volumes:
-      - ${TWOFAUTH_DATA:-../services-data/system/2fauth}:/2fauth/database
+    - ${TWOFAUTH_DATA:-../services-data/system/2fauth}:/2fauth/database
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- CAL.COM (scheduling infrastructure, Calendly alternative) ---
   calcom:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=calcom
-      - homepage.icon=calcom
-      - homepage.description=Scheduling infrastructure
-      - homepage.href=https://cal.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Cal.com
+    - homepage.icon=mdi-calendar
+    - homepage.description=Scheduling infrastructure
+    - homepage.href=https://cal.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/calcom/calcom-images:main
     container_name: calcom
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=80
-      - DATABASE_URL=postgresql://cal:${CALCOM_DB_PASSWORD}@calcom-db:5432/calcom
-      - REDIS_URL=redis://calcom-redis:6379
-      - WEBAPP_URL=https://cal.${DUCKDNS_DOMAIN:-localhost}
-      - NEXT_PUBLIC_WEBAPP_URL=https://cal.${DUCKDNS_DOMAIN:-localhost}
-      - NEXTAUTH_SECRET=${CALCOM_SECRET}
-      - CALENDSO_ENCRYPTION_KEY=${CALCOM_ENCRYPTION_KEY}
-      - NEXT_PUBLIC_LICENSE_CONSOLE_URL=
-      - EMAIL_SERVER_HOST=disabled
+    - NODE_ENV=production
+    - PORT=80
+    - DATABASE_URL=postgresql://cal:${CALCOM_DB_PASSWORD}@calcom-db:5432/calcom
+    - REDIS_URL=redis://calcom-redis:6379
+    - WEBAPP_URL=https://cal.${DUCKDNS_DOMAIN:-localhost}
+    - NEXT_PUBLIC_WEBAPP_URL=https://cal.${DUCKDNS_DOMAIN:-localhost}
+    - NEXTAUTH_SECRET=${CALCOM_SECRET}
+    - CALENDSO_ENCRYPTION_KEY=${CALCOM_ENCRYPTION_KEY}
+    - NEXT_PUBLIC_LICENSE_CONSOLE_URL=
+    - EMAIL_SERVER_HOST=disabled
     ports:
-      - "${CALCOM_PORT:-8020}:80"
+    - "${CALCOM_PORT:-8020}:80"
     depends_on:
-      - calcom-db
-      - calcom-redis
+    - calcom-db
+    - calcom-redis
     volumes:
-      - ${CALCOM_DATA:-../services-data/system/calcom}:/calcom-data
+    - ${CALCOM_DATA:-../services-data/system/calcom}:/calcom-data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- CAL.COM POSTGRES ---
   calcom-db:
@@ -123,13 +119,13 @@ services:
     container_name: calcom-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=calcom
-      - POSTGRES_USER=cal
-      - POSTGRES_PASSWORD=${CALCOM_DB_PASSWORD}
+    - POSTGRES_DB=calcom
+    - POSTGRES_USER=cal
+    - POSTGRES_PASSWORD=${CALCOM_DB_PASSWORD}
     volumes:
-      - ${CALCOM_DB_DATA:-../services-data/system/calcom/postgres}:/var/lib/postgresql/data
+    - ${CALCOM_DB_DATA:-../services-data/system/calcom/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- CAL.COM REDIS ---
   calcom-redis:
@@ -138,82 +134,79 @@ services:
     container_name: calcom-redis
     restart: unless-stopped
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- RADICALE (CalDAV/CardDAV server) ---
   radicale:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=radicale
-      - homepage.icon=radicale
-      - homepage.description=CalDAV/CardDAV server
-      - homepage.href=https://dav.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Radicale
+    - homepage.icon=mdi-calendar-clock
+    - homepage.description=CalDAV/CardDAV server
+    - homepage.href=https://dav.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/kozea/radicale:stable
     container_name: radicale
     restart: unless-stopped
     ports:
-      - "${RADICALE_PORT:-5232}:5232"
+    - "${RADICALE_PORT:-5232}:5232"
     volumes:
-      - ${RADICALE_CONFIG:-../services-data/system/radicale/config}:/etc/radicale
-      - ${RADICALE_DATA:-../services-data/system/radicale/data}:/var/lib/radicale
+    - ${RADICALE_CONFIG:-../services-data/system/radicale/config}:/etc/radicale
+    - ${RADICALE_DATA:-../services-data/system/radicale/data}:/var/lib/radicale
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- GROCY (household inventory + shopping list + meal planning) ---
   grocy:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=grocy
-      - homepage.icon=grocy
-      - homepage.description=Household inventory + shopping
-      - homepage.href=https://grocy.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Grocy
+    - homepage.icon=mdi-home
+    - homepage.description=Household inventory + shopping
+    - homepage.href=https://grocy.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/linuxserver/grocy:latest
     container_name: grocy
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
-      - DISABLE_BROWSER_OPEN=true
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
+    - DISABLE_BROWSER_OPEN=true
     ports:
-      - "${GROCY_PORT:-9283}:80"
+    - "${GROCY_PORT:-9283}:80"
     volumes:
-      - ${GROCY_DATA:-../services-data/system/grocy}:/config
+    - ${GROCY_DATA:-../services-data/system/grocy}:/config
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KEILA (newsletter platform) ---
   keila:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=keila
-      - homepage.icon=keila
-      - homepage.description=Newsletter platform
-      - homepage.href=https://news.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Keila
+    - homepage.icon=si-mailgun
+    - homepage.description=Newsletter (open-source Mailchimp alt)
+    - homepage.href=https://news.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: pentacent/keila:latest
     container_name: keila
     restart: unless-stopped
     environment:
-      - PHX_HOST=news.${DUCKDNS_DOMAIN:-localhost}
-      - DATABASE_URL=ecto://keila:${KEILA_DB_PASSWORD}@keila-db:5432/keila
-      - SECRET_KEY_BASE=${KEILA_SECRET}
-      - SMTP_HOST=
-      - SMTP_USERNAME=
-      - SMTP_PASSWORD=
+    - PHX_HOST=news.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=ecto://keila:${KEILA_DB_PASSWORD}@keila-db:5432/keila
+    - SECRET_KEY_BASE=${KEILA_SECRET}
+    - SMTP_HOST=
+    - SMTP_USERNAME=
+    - SMTP_PASSWORD=
     ports:
-      - "${KEILA_PORT:-4000}:4000"
+    - "${KEILA_PORT:-4000}:4000"
     depends_on:
-      - keila-db
+    - keila-db
     volumes:
-      - ${KEILA_DATA:-../services-data/system/keila}:/app/data
+    - ${KEILA_DATA:-../services-data/system/keila}:/app/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KEILA POSTGRES ---
   keila-db:
@@ -222,13 +215,13 @@ services:
     container_name: keila-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=keila
-      - POSTGRES_USER=keila
-      - POSTGRES_PASSWORD=${KEILA_DB_PASSWORD}
+    - POSTGRES_DB=keila
+    - POSTGRES_USER=keila
+    - POSTGRES_PASSWORD=${KEILA_DB_PASSWORD}
     volumes:
-      - ${KEILA_DB_DATA:-../services-data/system/keila/postgres}:/var/lib/postgresql/data
+    - ${KEILA_DB_DATA:-../services-data/system/keila/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KIMAI (time tracking) — moved to compose-finance.yml ---
 
@@ -236,28 +229,27 @@ services:
   # Single binary / container. Stores blocks locally; Y.js sync optional.
   affine:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=affine
-      - homepage.icon=affine
-      - homepage.description=Local-first Notion + Miro
-      - homepage.href=https://notes.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Affine
+    - homepage.icon=mdi-notebook
+    - homepage.description=Local-first Notion + Miro
+    - homepage.href=https://notes.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: ghcr.io/toeverything/affine:stable
     container_name: affine
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=3010
-      - DATABASE_URL=postgres://affine:${AFFINE_DB_PASSWORD}@affine-db:5432/affine
+    - NODE_ENV=production
+    - PORT=3010
+    - DATABASE_URL=postgres://affine:${AFFINE_DB_PASSWORD}@affine-db:5432/affine
     ports:
-      - "${AFFINE_PORT:-3010}:3010"
+    - "${AFFINE_PORT:-3010}:3010"
     depends_on:
-      - affine-db
+    - affine-db
     volumes:
-      - ${AFFINE_DATA:-../services-data/system/affine}:/data
+    - ${AFFINE_DATA:-../services-data/system/affine}:/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- AFFINE POSTGRES ---
   affine-db:
@@ -266,44 +258,43 @@ services:
     container_name: affine-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=affine
-      - POSTGRES_USER=affine
-      - POSTGRES_PASSWORD=${AFFINE_DB_PASSWORD}
+    - POSTGRES_DB=affine
+    - POSTGRES_USER=affine
+    - POSTGRES_PASSWORD=${AFFINE_DB_PASSWORD}
     volumes:
-      - ${AFFINE_DB_DATA:-../services-data/system/affine/postgres}:/var/lib/postgresql/data
+    - ${AFFINE_DB_DATA:-../services-data/system/affine/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- DOCUMENSO (DocuSign alternative, e-signatures) ---
   # Stack: NestJS API + Next.js frontend + Postgres.
   documenso:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=documenso
-      - homepage.icon=documenso
-      - homepage.description=Document signing (DocuSign alt)
-      - homepage.href=https://sign.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Documenso
+    - homepage.icon=mdi-signature-freehand
+    - homepage.description=Document signing (DocuSign alt)
+    - homepage.href=https://sign.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: documenso/documenso:latest
     container_name: documenso
     restart: unless-stopped
     depends_on:
-      - documenso-db
-      - documenso-redis
+    - documenso-db
+    - documenso-redis
     environment:
-      - NEXTAUTH_SECRET=${DOCUMENSO_SECRET}
-      - NEXTAUTH_URL=https://sign.${DUCKDNS_DOMAIN:-localhost}
-      - DATABASE_URL=postgres://documenso:${DOCUMENSO_DB_PASSWORD}@documenso-db:5432/documenso
-      - REDIS_URL=redis://documenso-redis:6379
-      - PORT=3500
-      - NODE_ENV=production
+    - NEXTAUTH_SECRET=${DOCUMENSO_SECRET}
+    - NEXTAUTH_URL=https://sign.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=postgres://documenso:${DOCUMENSO_DB_PASSWORD}@documenso-db:5432/documenso
+    - REDIS_URL=redis://documenso-redis:6379
+    - PORT=3500
+    - NODE_ENV=production
     ports:
-      - "${DOCUMENSO_PORT:-3500}:3500"
+    - "${DOCUMENSO_PORT:-3500}:3500"
     volumes:
-      - ${DOCUMENSO_DATA:-../services-data/system/documenso}:/data
+    - ${DOCUMENSO_DATA:-../services-data/system/documenso}:/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- DOCUMENSO POSTGRES ---
   documenso-db:
@@ -312,13 +303,13 @@ services:
     container_name: documenso-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=documenso
-      - POSTGRES_USER=documenso
-      - POSTGRES_PASSWORD=${DOCUMENSO_DB_PASSWORD}
+    - POSTGRES_DB=documenso
+    - POSTGRES_USER=documenso
+    - POSTGRES_PASSWORD=${DOCUMENSO_DB_PASSWORD}
     volumes:
-      - ${DOCUMENSO_DB_DATA:-../services-data/system/documenso/postgres}:/var/lib/postgresql/data
+    - ${DOCUMENSO_DB_DATA:-../services-data/system/documenso/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- DOCUMENSO REDIS ---
   documenso-redis:
@@ -327,32 +318,31 @@ services:
     container_name: documenso-redis
     restart: unless-stopped
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- DOCUSEAL (DocuSign alternative, e-signatures) ---
   # Ruby on Rails. Single-container with SQLite.
   docuseal:
     labels:
-      - homepage.group=Productivity
-      - homepage.name=docuseal
-      - homepage.icon=docuseal
-      - homepage.description=E-signatures (DocuSign alt)
-      - homepage.href=https://esign.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=DocuSeal
+    - homepage.icon=mdi-file-sign
+    - homepage.description=E-signatures (DocuSign alt)
+    - homepage.href=https://esign.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["productivity"]
     image: docuseal/docuseal:latest
     container_name: docuseal
     restart: unless-stopped
     environment:
-      - DATABASE_URL=sqlite3:///data/docuseal.sqlite3
-      - SECRET_KEY_BASE=${DOCUSEAL_SECRET}
-      - HOST=https://esign.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=sqlite3:///data/docuseal.sqlite3
+    - SECRET_KEY_BASE=${DOCUSEAL_SECRET}
+    - HOST=https://esign.${DUCKDNS_DOMAIN:-localhost}
     ports:
-      - "${DOCUSEAL_PORT:-3501}:3000"
+    - "${DOCUSEAL_PORT:-3501}:3000"
     volumes:
-      - ${DOCUSEAL_DATA:-../services-data/system/docuseal}:/data
+    - ${DOCUSEAL_DATA:-../services-data/system/docuseal}:/data
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

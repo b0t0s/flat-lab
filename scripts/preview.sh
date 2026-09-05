@@ -111,7 +111,6 @@ hemmelig	Encrypted secret sharing. Burn-after-read.
 home-assistant	Home automation hub. Integrates with thousands of devices.
 homebox	Household inventory tracker. QR labels, items, photos.
 homepage	Personal dashboard. Auto-discovers services via docker labels.
-homepage-auto-config	Watches docker labels and updates homepage config.
 immich-server	Google Photos replacement. Web UI + mobile apps.
 immich-postgres	Postgres backend for Immich.
 immich-redis	Redis cache for Immich.

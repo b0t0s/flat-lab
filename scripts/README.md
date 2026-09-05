@@ -102,3 +102,23 @@ Exit codes:
 Helper invoked by `compose-tui.sh` whenever fzf shows the right-hand preview pane. Runs as a separate process because fzf invokes `--preview` via `sh -c`, which can't see bash functions defined in the parent script. The hint tables live here so they're editable in one place without touching the TUI.
 
 You generally don't call this directly — `compose-tui.sh` does it. If you want to test or extend the hint list, edit the `category_hints` and `service_hints` heredocs.
+
+## glance-gen.sh
+
+Writes Glance's `glance.yml` with static widgets (clock, search via SearXNG, resources, calendar, bookmarks with Proton suite) plus a `docker-containers` widget that auto-discovers services from `homepage.*` / `glance.*` labels via the docker socket. Overwrites `/app/config/glance.yml` on every run.
+
+Run automatically by `glance-init` on each `docker compose up glance-init`. To re-run manually:
+
+```bash
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v "$PWD/scripts/glance-gen.sh:/seed/glance-gen.sh:ro" \
+  -v "$HOME/repos/services-data/system/glance/config:/app/config" \
+  alpine /bin/sh -c "apk add --no-cache docker-cli && /seed/glance-gen.sh /app/config/glance.yml"
+```
+
+DO NOT edit `/app/config/glance.yml` on the Pi — it gets overwritten. To customize widget content, edit the labels on the relevant compose services and re-run.
+
+## homebox-init.sh / outline-init.sh
+
+Tiny init containers that generate the secret key + pepper for `homebox` and `outline` on first boot. Both prepend `apk add --no-cache openssl` because `alpine:latest` does not ship openssl by default.

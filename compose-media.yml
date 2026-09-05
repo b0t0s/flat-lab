@@ -3,99 +3,95 @@ services:
   # --- JELLYFIN (media server) ---
   jellyfin:
     labels:
-      - homepage.group=Media
-      - homepage.name=jellyfin
-      - homepage.icon=jellyfin
-      - homepage.description=Movies + TV streaming
-      - homepage.href=https://jellyfin.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Media & Entertainment
+    - homepage.name=Jellyfin
+    - homepage.icon=mdi-play-circle
+    - homepage.description=Movies + TV streaming
+    - homepage.href=https://media.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
     ports:
-      - "8096:8096"
+    - "8096:8096"
     volumes:
-      - ${JELLYFIN_CONFIG:-../services-data/media/jellyfin/config}:/config
-      - ${JELLYFIN_CACHE:-../services-data/media/jellyfin/cache}:/cache
-      - ${MEDIA_FOLDERS:-../services-data/media}:/media:ro
+    - ${JELLYFIN_CONFIG:-../services-data/media/jellyfin/config}:/config
+    - ${JELLYFIN_CACHE:-../services-data/media/jellyfin/cache}:/cache
+    - ${MEDIA_FOLDERS:-../services-data/media}:/media:ro
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- NAVIDROME (music streaming) ---
   navidrome:
     labels:
-      - homepage.group=Media
-      - homepage.name=navidrome
-      - homepage.icon=navidrome
-      - homepage.description=Music streaming (Subsonic)
-      - homepage.href=https://navidrome.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Media & Entertainment
+    - homepage.name=Navidrome
+    - homepage.icon=mdi-music
+    - homepage.description=Music streaming (Spotify alt)
+    - homepage.href=https://music.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: deluan/navidrome:latest
     container_name: navidrome
     restart: unless-stopped
     ports:
-      - "${NAVIDROME_HOST_PORT:-4533}:4533"
+    - "${NAVIDROME_HOST_PORT:-4533}:4533"
     environment:
-      - ND_SCANSCHEDULE=1h
-      - ND_LOGLEVEL=info
-      - ND_BASEURL=/
-      - ND_MUSICFOLDER=/music
+    - ND_SCANSCHEDULE=1h
+    - ND_LOGLEVEL=info
+    - ND_BASEURL=/
+    - ND_MUSICFOLDER=/music
     volumes:
-      - ${NAVIDROME_DATA:-../services-data/media/navidrome}:/data
-      - ${NAVIDROME_MUSIC:-../services-data/media/music}:/music:ro
+    - ${NAVIDROME_DATA:-../services-data/media/navidrome}:/data
+    - ${NAVIDROME_MUSIC:-../services-data/media/music}:/music:ro
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- KAVITA (comics/manga reader) ---
   kavita:
     labels:
-      - homepage.group=Media
-      - homepage.name=kavita
-      - homepage.icon=kavita
-      - homepage.description=Manga / books reader
-      - homepage.href=https://kavita.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Media & Entertainment
+    - homepage.name=Kavita
+    - homepage.icon=mdi-book-multiple
+    - homepage.description=Manga / books reader
+    - homepage.href=https://manga.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: jvmilazz0/kavita:latest
     container_name: kavita
     restart: unless-stopped
     environment:
-      - TZ=${TZ:-Europe/Kyiv}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${KAVITA_HOST_PORT:-5002}:5000"
+    - "${KAVITA_HOST_PORT:-5002}:5000"
     volumes:
-      - ${KAVITA_DATA:-../services-data/media/kavita}:/kavita/config
-      - ${KAVITA_LIBRARY:-../services-data/media/books}:/books:ro
-      - ${KAVITA_MANGA:-../services-data/media/manga}:/manga:ro
+    - ${KAVITA_DATA:-../services-data/media/kavita}:/kavita/config
+    - ${KAVITA_LIBRARY:-../services-data/media/books}:/books:ro
+    - ${KAVITA_MANGA:-../services-data/media/manga}:/manga:ro
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- CALIBRE-WEB (ebook reader) ---
   calibre-web:
     labels:
-      - homepage.group=Media
-      - homepage.name=calibre-web
-      - homepage.icon=calibre-web
-      - homepage.description=Book library browser
-      - homepage.href=https://calibre.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Knowledge
+    - homepage.name=Calibre
+    - homepage.icon=mdi-book-open-page-variant
+    - homepage.description=Book library browser
+    - homepage.href=https://books.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${CALIBRE_HOST_PORT:-8083}:8083"
+    - "${CALIBRE_HOST_PORT:-8083}:8083"
     volumes:
-      - ${CALIBRE_DATA:-../services-data/media/calibre-web}:/config
-      - ${CALIBRE_LIBRARY:-../services-data/media/books}:/books:ro
+    - ${CALIBRE_DATA:-../services-data/media/calibre-web}:/config
+    - ${CALIBRE_LIBRARY:-../services-data/media/books}:/books:ro
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- QBITTORRENT INIT (configures qBittorrent API on first run) ---
   qbittorrent-init:
@@ -107,136 +103,131 @@ services:
       qbittorrent:
         condition: service_started
     volumes:
-      - ../services-data/system/qbittorrent-init:/init
+    - ../services-data/system/qbittorrent-init:/init
     entrypoint: /bin/sh
     command:
-      - -c
-      - |
-        apk add --no-cache curl >/dev/null
-        sleep 5
-        if [ ! -f /init/qbittorrent.json ]; then
-          echo "Bootstrapping qBittorrent..."
-          curl -s -c /init/qbittorrent.json -X POST http://qbittorrent:8080/api/v2/auth/login \
-            -d "username=admin&password=adminadmin" >/dev/null 2>&1 || true
-          echo "qBittorrent bootstrap complete (check logs)."
-        else
-          echo "qbittorrent.json exists. Skipping."
-        fi
+    - -c
+    - |
+      apk add --no-cache curl >/dev/null
+      sleep 5
+      if [ ! -f /init/qbittorrent.json ]; then
+        echo "Bootstrapping qBittorrent..."
+        curl -s -c /init/qbittorrent.json -X POST http://qbittorrent:8080/api/v2/auth/login \
+          -d "username=admin&password=adminadmin" >/dev/null 2>&1 || true
+        echo "qBittorrent bootstrap complete (check logs)."
+      else
+        echo "qbittorrent.json exists. Skipping."
+      fi
 
   # --- QBITTORRENT ---
   qbittorrent:
     labels:
-      - homepage.group=Media
-      - homepage.name=qbittorrent
-      - homepage.icon=qbittorrent
-      - homepage.description=Torrent client
-      - homepage.href=https://torrent.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Downloads
+    - homepage.name=qBittorrent
+    - homepage.icon=mdi-magnet
+    - homepage.description=Torrent client
+    - homepage.href=https://torrent.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
-      - WEBUI_PORT=8080
-      - TORRENTING_PORT=${QBITTORRENT_TORRENT_PORT:-6881}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
+    - WEBUI_PORT=8080
+    - TORRENTING_PORT=${QBITTORRENT_TORRENT_PORT:-6881}
     ports:
-      - "${QBITTORRENT_WEB_PORT:-8080}:8080"
-      - "${QBITTORRENT_TORRENT_PORT:-6881}:6881"
-      - "${QBITTORRENT_TORRENT_PORT:-6881}:6881/udp"
+    - "${QBITTORRENT_WEB_PORT:-8080}:8080"
+    - "${QBITTORRENT_TORRENT_PORT:-6881}:6881"
+    - "${QBITTORRENT_TORRENT_PORT:-6881}:6881/udp"
     volumes:
-      - ${QBITTORRENT_CONFIG:-../services-data/system/qbittorrent/config}:/config
-      - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
+    - ${QBITTORRENT_CONFIG:-../services-data/system/qbittorrent/config}:/config
+    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- PROWLARR (indexer manager) ---
   prowlarr:
     labels:
-      - homepage.group=Media
-      - homepage.name=prowlarr
-      - homepage.icon=prowlarr
-      - homepage.description=Indexer manager
-      - homepage.href=https://prowlarr.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Downloads
+    - homepage.name=Prowlarr
+    - homepage.icon=mdi-magnify
+    - homepage.description=Indexer manager
+    - homepage.href=https://indexer.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${PROWLARR_HOST_PORT:-9696}:9696"
+    - "${PROWLARR_HOST_PORT:-9696}:9696"
     volumes:
-      - ${PROWLARR_DATA:-../services-data/system/prowlarr}:/config
+    - ${PROWLARR_DATA:-../services-data/system/prowlarr}:/config
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- RADARR (movies) ---
   radarr:
     labels:
-      - homepage.group=Media
-      - homepage.name=radarr
-      - homepage.icon=radarr
-      - homepage.description=Movies automation
-      - homepage.href=https://radarr.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Downloads
+    - homepage.name=Radarr
+    - homepage.icon=mdi-movie
+    - homepage.description=Movie library manager
+    - homepage.href=https://radarr.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${RADARR_HOST_PORT:-7878}:7878"
+    - "${RADARR_HOST_PORT:-7878}:7878"
     volumes:
-      - ${RADARR_DATA:-../services-data/system/radarr}:/config
-      - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
-      - ${MEDIA_FOLDERS:-../services-data/media}:/movies:rw
+    - ${RADARR_DATA:-../services-data/system/radarr}:/config
+    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
+    - ${MEDIA_FOLDERS:-../services-data/media}:/movies:rw
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- SONARR (TV shows) ---
   sonarr:
     labels:
-      - homepage.group=Media
-      - homepage.name=sonarr
-      - homepage.icon=sonarr
-      - homepage.description=TV automation
-      - homepage.href=https://sonarr.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Downloads
+    - homepage.name=Sonarr
+    - homepage.icon=mdi-television
+    - homepage.description=TV library manager
+    - homepage.href=https://sonarr.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     restart: unless-stopped
     environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-Europe/Kyiv}
+    - PUID=${PUID:-1000}
+    - PGID=${PGID:-1000}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${SONARR_HOST_PORT:-8989}:8989"
+    - "${SONARR_HOST_PORT:-8989}:8989"
     volumes:
-      - ${SONARR_DATA:-../services-data/system/sonarr}:/config
-      - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
-      - ${MEDIA_FOLDERS:-../services-data/media}:/tv:rw
+    - ${SONARR_DATA:-../services-data/system/sonarr}:/config
+    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
+    - ${MEDIA_FOLDERS:-../services-data/media}:/tv:rw
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- METUBE (YouTube downloader) ---
   metube:
     labels:
-      - homepage.group=Media
-      - homepage.name=metube
-      - homepage.icon=youtube
-      - homepage.description=YouTube downloader
-      - homepage.href=https://metube.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Downloads
+    - homepage.name=MeTube
+    - homepage.icon=mdi-youtube
+    - homepage.description=YouTube downloader
+    - homepage.href=https://metube.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: ghcr.io/alexta69/metube:latest
     container_name: metube
@@ -246,14 +237,14 @@ services:
     # dev PC without LAN AdGuard, set DNS1/DNS2 in .env to public DNS.
     # See docs/ignored/docker-dns-decision-2026-08.md
     dns:
-      - "${DNS1:-}"
-      - "${DNS2:-}"
+    - "${DNS1:-}"
+    - "${DNS2:-}"
     ports:
-      - "${METUBE_HOST_PORT:-8091}:8081"
+    - "${METUBE_HOST_PORT:-8091}:8081"
     volumes:
-      - ${METUBE_DATA:-../services-data/media/videos}:/downloads
+    - ${METUBE_DATA:-../services-data/media/videos}:/downloads
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- FLARESOLVERR (Cloudflare bypass for indexers) ---
   flaresolverr:
@@ -262,56 +253,54 @@ services:
     container_name: flaresolverr
     restart: unless-stopped
     environment:
-      - LOG_LEVEL=info
+    - LOG_LEVEL=info
     ports:
-      - "${FLARESOLVERR_PORT:-8191}:8191"
+    - "${FLARESOLVERR_PORT:-8191}:8191"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- PINGVIN-SHARE (file sharing) ---
   pingvin-share:
     labels:
-      - homepage.group=Media
-      - homepage.name=pingvin-share
-      - homepage.icon=pingvin-share
-      - homepage.description=File sharing
-      - homepage.href=https://share.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Sharing
+    - homepage.name=Pingvin Share
+    - homepage.icon=mdi-share-variant
+    - homepage.description=File share (WeTransfer alt)
+    - homepage.href=https://share.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: stonith404/pingvin-share:latest
     container_name: pingvin-share
     restart: unless-stopped
     environment:
-      - TZ=${TZ:-Europe/Kyiv}
+    - TZ=${TZ:-Europe/Kyiv}
     ports:
-      - "${PINGVIN_HOST_PORT:-3010}:3000"
+    - "${PINGVIN_HOST_PORT:-3010}:3000"
     volumes:
-      - ${PINGVIN_DATA:-../services-data/system/pingvin-share}:/app/backend/pingvin-share-data
+    - ${PINGVIN_DATA:-../services-data/system/pingvin-share}:/app/backend/pingvin-share-data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- FILEBROWSER QUANTUM ---
   filebrowser-quantum:
     labels:
-      - homepage.group=Media
-      - homepage.name=filebrowser-quantum
-      - homepage.icon=fileexplorer
-      - homepage.description=Web file manager
-      - homepage.href=https://files.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=FileBrowser
+    - homepage.icon=si-filebrowser
+    - homepage.description=Web file manager
+    - homepage.href=https://files.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["media"]
     image: gtstef/filebrowser:1.3.3-stable
     container_name: filebrowser-quantum
     restart: unless-stopped
     environment:
-      - FB_BASEURL=/
+    - FB_BASEURL=/
     ports:
-      - "${FILEBROWSER_QUANTUM_PORT:-8090}:80"
+    - "${FILEBROWSER_QUANTUM_PORT:-8090}:80"
     volumes:
-      - ${FILEBROWSER_DATA:-../services-data/system/filebrowser-quantum}:/config
-      - ${FILEBROWSER_FILES:-../services-data/public}:/srv
+    - ${FILEBROWSER_DATA:-../services-data/system/filebrowser-quantum}:/config
+    - ${FILEBROWSER_FILES:-../services-data/public}:/srv
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

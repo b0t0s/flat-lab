@@ -1,0 +1,5 @@
+---
+# Docker socket config for live container status on each service.
+# Reference: https://gethomepage.dev/configs/docker/
+my-docker:
+  socket: /var/run/docker.sock

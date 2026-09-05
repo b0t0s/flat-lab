@@ -3,12 +3,11 @@ services:
   # --- HOME-ASSISTANT (home automation hub) ---
   home-assistant:
     labels:
-      - homepage.group=Smart Home
-      - homepage.name=home-assistant
-      - homepage.icon=home-assistant
-      - homepage.description=Home automation hub
-      - homepage.href=https://home.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Home & Automation
+    - homepage.name=Home Assistant
+    - homepage.icon=mdi-home-automation
+    - homepage.description=Home automation hub
+    - homepage.href=https://home-assistant.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["smarthome"]
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: home-assistant
@@ -16,33 +15,48 @@ services:
     privileged: true
     network_mode: host
     volumes:
-      - ${HOME_ASSISTANT_DATA:-../services-data/system/home-assistant}:/config
-      - /etc/localtime:/etc/localtime:ro
+    - ${HOME_ASSISTANT_DATA:-../services-data/system/home-assistant}:/config
+    - /etc/localtime:/etc/localtime:ro
     environment:
-      - TZ=${TZ:-Europe/Kyiv}
+    - TZ=${TZ:-Europe/Kyiv}
 
   # --- HOMEBOX (household inventory) ---
   homebox:
     labels:
-      - homepage.group=Smart Home
-      - homepage.name=homebox
-      - homepage.icon=homebox
-      - homepage.description=Household inventory
-      - homepage.href=https://inventory.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Home & Automation
+    - homepage.name=Homebox
+    - homepage.icon=mdi-package-variant-closed
+    - homepage.description=Household inventory
+    - homepage.href=https://inventory.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["smarthome"]
     image: sysadminsmedia/homebox:latest
     container_name: homebox
     restart: unless-stopped
+    depends_on:
+      homebox-init:
+        condition: service_completed_successfully
+    env_file:
+    - ../services-data/system/homebox/secrets/homebox.env
     environment:
-      - HBOX_LOG_LEVEL=info
-      - HBOX_LOG_FORMAT=text
+    - HBOX_LOG_LEVEL=info
+    - HBOX_LOG_FORMAT=text
     ports:
-      - "${HOMEBOX_HOST_PORT:-3100}:7745"
+    - "${HOMEBOX_HOST_PORT:-3100}:7745"
     volumes:
-      - ${HOMEBOX_DATA:-../services-data/system/homebox}:/data
+    - ${HOMEBOX_DATA:-../services-data/system/homebox}:/data
     networks:
-      - homelab_net
+    - homelab_net
+
+  # --- HOMEBOX INIT (generates HBOX_AUTH_API_KEY_PEPPER once, persists) ---
+  homebox-init:
+    profiles: ["smarthome"]
+    image: alpine:latest
+    container_name: homebox-init
+    restart: "no"
+    command: ["/scripts/homebox-init.sh"]
+    volumes:
+    - ../services-data/system/homebox/secrets:/secrets
+    - ./scripts/homebox-init.sh:/scripts/homebox-init.sh:ro
 
   # --- NODERED INIT (writes settings.js with admin password) ---
   nodered-init:
@@ -51,39 +65,33 @@ services:
     container_name: nodered-init
     restart: "no"
     volumes:
-      - ${NODERED_DATA:-../services-data/system/nodered}/settings.js:/settings.js.template:ro
-      - ../services-data/system/nodered:/data
+    - ${NODERED_DATA:-../services-data/system/nodered}/settings.js:/settings.js.template:ro
+    - ../services-data/system/nodered:/data
     entrypoint: /bin/sh
     command:
-      - -c
-      - |
-        if [ ! -f /data/settings.js ]; then
-          echo "Bootstrapping nodered settings.js..."
-          envsubst '$$NODERED_ADMIN_PASS' < /settings.js.template > /data/settings.js
-          echo "nodered settings.js created."
-        else
-          echo "settings.js exists. Skipping."
-        fi
+    - -c
+    - |
+      apk add --no-cache gettext >/dev/null
+      if [ ! -f /data/settings.js ]; then
+        echo "Bootstrapping nodered settings.js..."
+        envsubst '$$NODERED_ADMIN_PASS' < /settings.js.template > /data/settings.js
+        echo "nodered settings.js created."
+      else
+        echo "settings.js exists. Skipping."
+      fi
 
   # --- NODERED (automation flows) ---
   nodered:
-    labels:
-      - homepage.group=Smart Home
-      - homepage.name=nodered
-      - homepage.icon=nodered
-      - homepage.description=Flow-based automation
-      - homepage.href=https://nodered.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
     profiles: ["smarthome"]
     image: nodered/node-red:latest
     container_name: nodered
     restart: unless-stopped
     ports:
-      - "${NODERED_HOST_PORT:-1880}:1880"
+    - "${NODERED_HOST_PORT:-1880}:1880"
     volumes:
-      - ${NODERED_DATA:-../services-data/system/nodered}:/data
+    - ${NODERED_DATA:-../services-data/system/nodered}:/data
     networks:
-      - homelab_net
+    - homelab_net
     depends_on:
       nodered-init:
         condition: service_completed_successfully

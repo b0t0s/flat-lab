@@ -1,58 +1,29 @@
 services:
 
-  # --- HOMEPAGE AUTO-CONFIG (generates widgets.yaml from compose labels) ---
-  homepage-auto-config:
-    profiles: ["dashboard"]
-    image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage-auto-config
-    restart: "no"
-    command:
-      - /app/bin/homepage
-      - config
-      - /app/config/widgets.yaml
-      - /app/config/services.yaml
-      - /app/config/settings.yaml
-      - /app/config/bookmarks.yaml
-      - /app/config/docker.yaml
-    volumes:
-      - ../services-data/system/homepage/config:/app/config
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-
-  # --- HOMEPAGE (dashboard) ---
+  # --- HOMEPAGE (dashboard, uses docker socket auto-discovery) ---
   homepage:
     labels:
-      - homepage.group=Dashboard
-      - homepage.name=homepage
-      - homepage.icon=homepage
-      - homepage.description=Personal dashboard
-      - homepage.href=https://homepage.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Dashboard
+    - homepage.name=Homepage
+    - homepage.icon=mdi-view-dashboard
+    - homepage.description=Personal dashboard
+    - homepage.href=https://dash.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["dashboard"]
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     restart: unless-stopped
-    depends_on:
-      homepage-auto-config:
-        condition: service_completed_successfully
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.${DUCKDNS_DOMAIN:-localhost},dash.${DUCKDNS_DOMAIN:-localhost},localhost,127.0.0.1}
+    - HOMEPAGE_ALLOWED_HOSTS=${HOMEPAGE_ALLOWED_HOSTS:-homepage.${DUCKDNS_DOMAIN:-localhost},dash.${DUCKDNS_DOMAIN:-localhost},localhost,127.0.0.1}
     ports:
-      - "${HOMEPAGE_PORT:-3015}:3000"
+    - "${HOMEPAGE_PORT:-3015}:3000"
     volumes:
-      - ../services-data/system/homepage/config:/app/config
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ../services-data/system/homepage/config:/app/config
+    - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - homelab_net
+    - homelab_net
 
-  # --- GLANCE (lightweight dashboard) ---
+  # --- GLANCE (lightweight dashboard with widgets) ---
   glance:
-    labels:
-      - homepage.group=Dashboard
-      - homepage.name=glance
-      - homepage.icon=glance
-      - homepage.description=Dashboard with widgets
-      - homepage.href=https://glance.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
     profiles: ["dashboard"]
     image: glanceapp/glance:latest
     container_name: glance
@@ -61,34 +32,31 @@ services:
       glance-init:
         condition: service_completed_successfully
     ports:
-      - "${GLANCE_PORT:-8088}:8080"
+    - "${GLANCE_PORT:-8088}:8080"
     volumes:
-      - ../services-data/system/glance/config:/app/config
+    - ../services-data/system/glance/config:/app/config
+    - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - homelab_net
+    - homelab_net
 
-  # --- GLANCE INIT (seed default config if absent) ---
+  # --- GLANCE INIT (regenerates glance.yml from glance-gen.sh on first boot) ---
   glance-init:
     profiles: ["dashboard"]
     image: alpine:latest
     container_name: glance-init
     restart: "no"
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: /bin/sh
     command:
-      - |
-        set -eu
-        mkdir -p /app/config
-        if [ ! -f /app/config/glance.yml ]; then
-          echo "[glance-init] seeding default config..."
-          cp /seed/glance.yml /app/config/glance.yml
-        else
-          echo "[glance-init] config exists, leaving alone"
-        fi
+    - -c
+    - |
+      set -eu
+      mkdir -p /app/config
+      /seed/glance-gen.sh /app/config/glance.yml
     volumes:
-      - ../services-data/system/glance/config:/app/config
-      - ./glance/glance.yml:/seed/glance.yml:ro
+    - ../services-data/system/glance/config:/app/config
+    - ./scripts/glance-gen.sh:/seed/glance-gen.sh:ro
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

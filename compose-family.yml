@@ -7,35 +7,34 @@ services:
     container_name: gramps-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=gramps
-      - POSTGRES_USER=gramps
-      - POSTGRES_PASSWORD=${GRAMPS_DB_PASSWORD}
+    - POSTGRES_DB=gramps
+    - POSTGRES_USER=gramps
+    - POSTGRES_PASSWORD=${GRAMPS_DB_PASSWORD}
     volumes:
-      - ${GRAMPS_DB_DATA:-../services-data/system/gramps-db}:/var/lib/postgresql/data
+    - ${GRAMPS_DB_DATA:-../services-data/system/gramps-db}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   gramps-web:
     labels:
-      - homepage.group=Family
-      - homepage.name=gramps-web
-      - homepage.icon=gramps
-      - homepage.description=Genealogy viewer
-      - homepage.href=https://genealogy.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Productivity
+    - homepage.name=Gramps
+    - homepage.icon=mdi-family-tree
+    - homepage.description=Genealogy viewer
+    - homepage.href=https://gramps.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["family"]
     image: ghcr.io/gramps-project/gramps-webapi:latest
     container_name: gramps-web
     restart: unless-stopped
     environment:
-      - GRAMPS_DATABASE_URI=postgresql://gramps:${GRAMPS_DB_PASSWORD}@gramps-db:5432/gramps
-      - GRAMPS_SECRET_KEY=${GRAMPS_SECRET}
+    - GRAMPS_DATABASE_URI=postgresql://gramps:${GRAMPS_DB_PASSWORD}@gramps-db:5432/gramps
+    - GRAMPS_SECRET_KEY=${GRAMPS_SECRET}
     depends_on:
-      - gramps-db
+    - gramps-db
     ports:
-      - "${GRAMPS_PORT:-5001}:5000"
+    - "${GRAMPS_PORT:-5001}:5000"
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

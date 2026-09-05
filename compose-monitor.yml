@@ -3,22 +3,21 @@ services:
   # --- BESZEL HUB (central metrics dashboard) ---
   beszel-hub:
     labels:
-      - homepage.group=Monitor
-      - homepage.name=beszel-hub
-      - homepage.icon=beszel
-      - homepage.description=Server metrics hub
-      - homepage.href=https://beszel.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Beszel
+    - homepage.icon=mdi-server
+    - homepage.description=Server metrics hub
+    - homepage.href=https://beszel.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["monitor"]
     image: henrygd/beszel:latest
     container_name: beszel-hub
     restart: unless-stopped
     ports:
-      - "${BESZEL_PORT:-8090}:8090"
+    - "${BESZEL_PORT:-8090}:8090"
     volumes:
-      - ${BESZEL_DATA:-../services-data/system/beszel}:/beszel_data
+    - ${BESZEL_DATA:-../services-data/system/beszel}:/beszel_data
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- BESZEL AGENT (monitors the host running the stack) ---
   beszel-agent:
@@ -28,39 +27,38 @@ services:
     restart: unless-stopped
     network_mode: host
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - PORT=45876
-      - KEY=${BESZEL_AGENT_KEY}
+    - PORT=45876
+    - KEY=${BESZEL_AGENT_KEY}
 
   # --- NTFY (push notifications) ---
   ntfy:
     labels:
-      - homepage.group=Monitor
-      - homepage.name=ntfy
-      - homepage.icon=ntfy
-      - homepage.description=Push notifications
-      - homepage.href=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=ntfy
+    - homepage.icon=mdi-bell-ring
+    - homepage.description=Notification pub/sub
+    - homepage.href=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["monitor"]
     image: binwiederhier/ntfy:latest
     container_name: ntfy
     restart: unless-stopped
     command: serve
     environment:
-      - TZ=${TZ:-Europe/Kyiv}
-      - NTFY_BASE_URL=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
-      - NTFY_AUTH_DEFAULT_ACCESS=deny-all
-      - NTFY_ENABLE_LOGIN=true
-      - NTFY_BEHIND_PROXY=true
+    - TZ=${TZ:-Europe/Kyiv}
+    - NTFY_BASE_URL=https://ntfy.${DUCKDNS_DOMAIN:-localhost}
+    - NTFY_AUTH_DEFAULT_ACCESS=deny-all
+    - NTFY_ENABLE_LOGIN=true
+    - NTFY_BEHIND_PROXY=true
     volumes:
-      - ${NTFY_CACHE:-../services-data/system/ntfy/cache}:/var/cache/ntfy
-      - ${NTFY_AUTH:-../services-data/system/ntfy/auth}:/var/lib/ntfy
-      - ${NTFY_CONFIG:-../services-data/system/ntfy/config}:/etc/ntfy
+    - ${NTFY_CACHE:-../services-data/system/ntfy/cache}:/var/cache/ntfy
+    - ${NTFY_AUTH:-../services-data/system/ntfy/auth}:/var/lib/ntfy
+    - ${NTFY_CONFIG:-../services-data/system/ntfy/config}:/etc/ntfy
     ports:
-      - "${NTFY_PORT:-2586}:80"
+    - "${NTFY_PORT:-2586}:80"
     networks:
-      - homelab_net
+    - homelab_net
 
   # --- PLAUSIBLE (privacy-focused web analytics) ---
   # Stack: ClickHouse + Postgres + Plausible tracker + frontend.
@@ -71,17 +69,17 @@ services:
     container_name: plausible-events
     restart: unless-stopped
     depends_on:
-      - plausible-db
-      - plausible-clickhouse
+    - plausible-db
+    - plausible-clickhouse
     environment:
-      - DATABASE_URL=postgres://plausible:${PLAUSIBLE_DB_PASSWORD}@plausible-db:5432/plausible
-      - CLICKHOUSE_DATABASE_URL=http://plausible-clickhouse:8123/plausible
-      - CLICKHOUSE_USER=plausible
-      - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
-      - SECRET_KEY_BASE=${PLAUSIBLE_SECRET}
-      - BASE_URL=https://stats.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=postgres://plausible:${PLAUSIBLE_DB_PASSWORD}@plausible-db:5432/plausible
+    - CLICKHOUSE_DATABASE_URL=http://plausible-clickhouse:8123/plausible
+    - CLICKHOUSE_USER=plausible
+    - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
+    - SECRET_KEY_BASE=${PLAUSIBLE_SECRET}
+    - BASE_URL=https://stats.${DUCKDNS_DOMAIN:-localhost}
     networks:
-      - homelab_net
+    - homelab_net
 
   plausible-db:
     profiles: ["monitor"]
@@ -89,13 +87,13 @@ services:
     container_name: plausible-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=plausible
-      - POSTGRES_USER=plausible
-      - POSTGRES_PASSWORD=${PLAUSIBLE_DB_PASSWORD}
+    - POSTGRES_DB=plausible
+    - POSTGRES_USER=plausible
+    - POSTGRES_PASSWORD=${PLAUSIBLE_DB_PASSWORD}
     volumes:
-      - ${PLAUSIBLE_DB_DATA:-../services-data/system/plausible/postgres}:/var/lib/postgresql/data
+    - ${PLAUSIBLE_DB_DATA:-../services-data/system/plausible/postgres}:/var/lib/postgresql/data
     networks:
-      - homelab_net
+    - homelab_net
 
   plausible-clickhouse:
     profiles: ["monitor"]
@@ -103,42 +101,41 @@ services:
     container_name: plausible-clickhouse
     restart: unless-stopped
     environment:
-      - CLICKHOUSE_DB=plausible
-      - CLICKHOUSE_USER=plausible
-      - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    - CLICKHOUSE_DB=plausible
+    - CLICKHOUSE_USER=plausible
+    - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
+    - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     volumes:
-      - ${PLAUSIBLE_CLICKHOUSE_DATA:-../services-data/system/plausible/clickhouse}:/var/lib/clickhouse
+    - ${PLAUSIBLE_CLICKHOUSE_DATA:-../services-data/system/plausible/clickhouse}:/var/lib/clickhouse
     networks:
-      - homelab_net
+    - homelab_net
 
   plausible:
     labels:
-      - homepage.group=Monitor
-      - homepage.name=plausible
-      - homepage.icon=plausible
-      - homepage.description=Privacy web analytics
-      - homepage.href=https://stats.${DUCKDNS_DOMAIN:-localhost}
-      - homepage.target=_blank
+    - homepage.group=Infrastructure
+    - homepage.name=Plausible
+    - homepage.icon=mdi-chart-line
+    - homepage.description=Privacy-friendly analytics
+    - homepage.href=https://stats.${DUCKDNS_DOMAIN:-localhost}
     profiles: ["monitor"]
     image: plausible/analytics:latest
     container_name: plausible
     restart: unless-stopped
     depends_on:
-      - plausible-db
-      - plausible-events
-      - plausible-clickhouse
+    - plausible-db
+    - plausible-events
+    - plausible-clickhouse
     environment:
-      - DATABASE_URL=postgres://plausible:${PLAUSIBLE_DB_PASSWORD}@plausible-db:5432/plausible
-      - CLICKHOUSE_DATABASE_URL=http://plausible-clickhouse:8123/plausible
-      - CLICKHOUSE_USER=plausible
-      - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
-      - SECRET_KEY_BASE=${PLAUSIBLE_SECRET}
-      - BASE_URL=https://stats.${DUCKDNS_DOMAIN:-localhost}
+    - DATABASE_URL=postgres://plausible:${PLAUSIBLE_DB_PASSWORD}@plausible-db:5432/plausible
+    - CLICKHOUSE_DATABASE_URL=http://plausible-clickhouse:8123/plausible
+    - CLICKHOUSE_USER=plausible
+    - CLICKHOUSE_PASSWORD=${PLAUSIBLE_CLICKHO_PASSWORD}
+    - SECRET_KEY_BASE=${PLAUSIBLE_SECRET}
+    - BASE_URL=https://stats.${DUCKDNS_DOMAIN:-localhost}
     ports:
-      - "${PLAUSIBLE_PORT:-3504}:8000"
+    - "${PLAUSIBLE_PORT:-3504}:8000"
     networks:
-      - homelab_net
+    - homelab_net
 
 networks:
   homelab_net:

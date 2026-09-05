@@ -127,7 +127,7 @@
 
     @inventory host inventory.{$DUCKDNS_DOMAIN}
     handle @inventory {
-        reverse_proxy homebox:7777
+        reverse_proxy homebox:7745
     }
 
     @nodered host nodered.{$DUCKDNS_DOMAIN}
@@ -236,14 +236,9 @@
         reverse_proxy dawarich:3000
     }
 
-    @shhh host shhh.{$DUCKDNS_DOMAIN}
-    handle @shhh {
-        reverse_proxy shhh:5000
-    }
-
-    @hemmelig host hemmelig.{$DUCKDNS_DOMAIN}
-    handle @hemmelig {
-        reverse_proxy hemmelig:3000
+    @paste host paste.{$DUCKDNS_DOMAIN}
+    handle @paste {
+        reverse_proxy privatebin:8080
     }
 
     @gist host gist.{$DUCKDNS_DOMAIN}
@@ -290,7 +285,7 @@
         reverse_proxy movim:80
     }
 
-    @immich host photos.{$DUCKDNS_DOMAIN}
+    @immich host photos.{$DUCKDNS_DOMAIN} immich.{$DUCKDNS_DOMAIN}
     handle @immich {
         reverse_proxy immich-server:2283
     }
@@ -365,6 +360,156 @@
     @monitor host monitor.{$DUCKDNS_DOMAIN}
     handle @monitor {
         reverse_proxy changedetection:5000
+    }
+
+
+    @trips host trips.{$DUCKDNS_DOMAIN}
+    handle @trips {
+        reverse_proxy adventurelog:8000
+    }
+
+    @notes host notes.{$DUCKDNS_DOMAIN}
+    handle @notes {
+        reverse_proxy affine:3010
+    }
+
+    @alias host alias.{$DUCKDNS_DOMAIN}
+    handle @alias {
+        reverse_proxy aliasvault:80
+    }
+
+
+    @wiki host wiki.{$DUCKDNS_DOMAIN}
+    handle @wiki {
+        reverse_proxy bookstack:80
+    }
+
+    @cal host cal.{$DUCKDNS_DOMAIN}
+    handle @cal {
+        reverse_proxy calcom:80
+    }
+
+    @calibre host calibre.{$DUCKDNS_DOMAIN}
+    handle @calibre {
+        reverse_proxy calibre-web:8083
+    }
+
+
+    @sign host sign.{$DUCKDNS_DOMAIN}
+    handle @sign {
+        reverse_proxy documenso:3500
+    }
+
+    @esign host esign.{$DUCKDNS_DOMAIN}
+    handle @esign {
+        reverse_proxy docuseal:3000
+    }
+
+
+    @irc host irc.{$DUCKDNS_DOMAIN}
+    handle @irc {
+        reverse_proxy ergochat:8080
+    }
+
+    @draw host draw.{$DUCKDNS_DOMAIN}
+    handle @draw {
+        reverse_proxy excalidraw:80
+    }
+
+
+    @glances host glances.{$DUCKDNS_DOMAIN}
+    handle @glances {
+        reverse_proxy glances:61208
+    }
+
+    @genealogy host genealogy.{$DUCKDNS_DOMAIN}
+    handle @genealogy {
+        reverse_proxy gramps-web:5000
+    }
+
+
+    @home-assistant host home-assistant.{$DUCKDNS_DOMAIN}
+    handle @home-assistant {
+        reverse_proxy host.docker.internal:8123
+    }
+
+    @secrets host secrets.{$DUCKDNS_DOMAIN}
+    handle @secrets {
+        reverse_proxy infisical:80
+    }
+
+
+    @karakeep host karakeep.{$DUCKDNS_DOMAIN}
+    handle @karakeep {
+        reverse_proxy karakeep:3000
+    }
+
+    @news host news.{$DUCKDNS_DOMAIN}
+    handle @news {
+        reverse_proxy keila:4000
+    }
+
+
+    @go host go.{$DUCKDNS_DOMAIN}
+    handle @go {
+        reverse_proxy kutt:3000
+    }
+
+    @forum host forum.{$DUCKDNS_DOMAIN}
+    handle @forum {
+        reverse_proxy lemmy:8536
+    }
+
+    @rss host rss.{$DUCKDNS_DOMAIN}
+    handle @rss {
+        reverse_proxy miniflux:8080
+    }
+
+    @contacts host contacts.{$DUCKDNS_DOMAIN}
+    handle @contacts {
+        reverse_proxy monica:80
+    }
+
+
+
+    @docs host docs.{$DUCKDNS_DOMAIN}
+    handle @docs {
+        reverse_proxy outline:3000
+    }
+
+
+    @pass host pass.{$DUCKDNS_DOMAIN}
+    handle @pass {
+        reverse_proxy passbolt:80
+    }
+
+
+
+    @stats host stats.{$DUCKDNS_DOMAIN}
+    handle @stats {
+        reverse_proxy plausible:8000
+    }
+
+    @dav host dav.{$DUCKDNS_DOMAIN}
+    handle @dav {
+        reverse_proxy radicale:5232
+    }
+
+    @siyuan host siyuan.{$DUCKDNS_DOMAIN}
+    handle @siyuan {
+        reverse_proxy siyuan:6806
+    }
+
+
+
+    @uptime host uptime.{$DUCKDNS_DOMAIN}
+    handle @uptime {
+        reverse_proxy uptime-kuma:3001
+    }
+
+    @vault host vault.{$DUCKDNS_DOMAIN}
+    handle @vault {
+        reverse_proxy vaultwarden:80
     }
 
     # Fallback

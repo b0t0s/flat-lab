@@ -1,0 +1,55 @@
+---
+# Homepage application-level settings.
+# Reference: https://gethomepage.dev/configs/settings/
+title: flat-lab
+background:
+  opacity: 50
+theme: dark
+color: slate
+headerStyle: boxed
+statusStyle: dot
+favicon: https://gethomepage.dev/img/favicon.png
+showStats: false
+target: _blank
+hideErrors: true
+language: en
+
+# fullWidth: stretch the dashboard edge-to-edge so cards fill empty space.
+# layout.style: row + columns: N forces each group into a single horizontal row,
+# preventing the default "wide column with 2 items" layout that wastes space.
+# Group names below must match `homepage.group` labels on compose services.
+fullWidth: true
+layout:
+  Dashboard:
+    style: row
+    columns: 3
+  Infrastructure:
+    style: row
+    columns: 4
+  Productivity:
+    style: row
+    columns: 4
+  Knowledge:
+    style: row
+    columns: 4
+  Media & Entertainment:
+    style: row
+    columns: 3
+  Home & Automation:
+    style: row
+    columns: 3
+  Development:
+    style: row
+    columns: 3
+  Sharing:
+    style: row
+    columns: 4
+  Chat & Messaging:
+    style: row
+    columns: 4
+  Downloads:
+    style: row
+    columns: 3
+  Secrets:
+    style: row
+    columns: 2
