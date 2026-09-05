@@ -88,8 +88,8 @@ services:
     ports:
     - "${CALIBRE_HOST_PORT:-8083}:8083"
     volumes:
-    - ${CALIBRE_DATA:-../services-data/media/calibre-web}:/config
-    - ${CALIBRE_LIBRARY:-../services-data/media/books}:/books:ro
+    - ${CALIBRE_DATA:-../services-data/system/calibre-web}:/config
+    - ${CALIBRE_LIBRARY:-../services-data/public/books}:/books
     networks:
     - homelab_net
 

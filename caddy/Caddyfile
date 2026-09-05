@@ -97,7 +97,9 @@
 
     @books host books.{$DUCKDNS_DOMAIN}
     handle @books {
-        reverse_proxy calibre-web:8083
+        reverse_proxy calibre-web:8083 {
+            header_up X-Forwarded-Proto https
+        }
     }
 
     @manga host manga.{$DUCKDNS_DOMAIN}
