@@ -158,7 +158,7 @@ services:
     depends_on:
       - seafile
     volumes:
-      - ${SEAFILE_DATA_PATH:-../services-data/seafile/data}:/shared
+      - ${SEAFILE_DATA_PATH:-../services-data/system/seafile/data}:/shared
       - /var/run/docker.sock:/var/run/docker.sock
     command: |
       /bin/sh -c "

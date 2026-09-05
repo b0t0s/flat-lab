@@ -18,7 +18,7 @@ services:
     ports:
     - "${METUBE_HOST_PORT:-8091}:8081"
     volumes:
-    - ${METUBE_DATA:-../services-data/media/videos}:/downloads
+    - ${METUBE_DATA:-../services-data/public/}:/downloads
     networks:
     - homelab_net
 
@@ -42,8 +42,8 @@ services:
     - ND_BASEURL=/
     - ND_MUSICFOLDER=/music
     volumes:
-    - ${NAVIDROME_DATA:-../services-data/media/navidrome}:/data
-    - ${NAVIDROME_MUSIC:-../services-data/media/music}:/music:ro
+    - ${NAVIDROME_DATA:-../services-data/system/navidrome}:/data
+    - ${NAVIDROME_MUSIC:-../services-data/public/music}:/music:ro
     networks:
     - homelab_net
 
@@ -62,9 +62,9 @@ services:
     ports:
     - "8096:8096"
     volumes:
-    - ${JELLYFIN_CONFIG:-../services-data/media/jellyfin/config}:/config
-    - ${JELLYFIN_CACHE:-../services-data/media/jellyfin/cache}:/cache
-    - ${MEDIA_FOLDERS:-../services-data/media}:/media:ro
+    - ${JELLYFIN_CONFIG:-../services-data/system/jellyfin/config}:/config
+    - ${JELLYFIN_CACHE:-../services-data/system/jellyfin/cache}:/cache
+    - ${MEDIA_FOLDERS:-../services-data/public/movies}:/media:ro
     networks:
     - homelab_net
 
@@ -85,9 +85,9 @@ services:
     ports:
     - "${KAVITA_HOST_PORT:-5002}:5000"
     volumes:
-    - ${KAVITA_DATA:-../services-data/media/kavita}:/kavita/config
-    - ${KAVITA_LIBRARY:-../services-data/media/books}:/books:ro
-    - ${KAVITA_MANGA:-../services-data/media/manga}:/manga:ro
+    - ${KAVITA_DATA:-../services-data/system/kavita}:/kavita/config
+    - ${KAVITA_LIBRARY:-../services-data/public/books}:/books:ro
+    - ${KAVITA_MANGA:-../services-data/public/manga}:/manga:ro
     networks:
     - homelab_net
 
@@ -115,7 +115,7 @@ services:
     - "${QBITTORRENT_TORRENT_PORT:-6881}:6881/udp"
     volumes:
     - ${QBITTORRENT_CONFIG:-../services-data/system/qbittorrent/config}:/config
-    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
+    - ${DOWNLOADS_PATH:-../services-data/public/downloads}:/downloads
     networks:
     - homelab_net
 
@@ -162,8 +162,8 @@ services:
     - "${RADARR_HOST_PORT:-7878}:7878"
     volumes:
     - ${RADARR_DATA:-../services-data/system/radarr}:/config
-    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
-    - ${MEDIA_FOLDERS:-../services-data/media}:/movies:rw
+    - ${DOWNLOADS_PATH:-../services-data/public/downloads}:/downloads
+    - ${MEDIA_FOLDERS:-../services-data/public/movies}:/movies:rw
     networks:
     - homelab_net
 
@@ -187,8 +187,8 @@ services:
     - "${SONARR_HOST_PORT:-8989}:8989"
     volumes:
     - ${SONARR_DATA:-../services-data/system/sonarr}:/config
-    - ${DOWNLOADS_PATH:-../services-data/downloads}:/downloads
-    - ${MEDIA_FOLDERS:-../services-data/media}:/tv:rw
+    - ${DOWNLOADS_PATH:-../services-data/public/downloads}:/downloads
+    - ${MEDIA_FOLDERS:-../services-data/public/movies}:/tv:rw
     networks:
     - homelab_net
 
@@ -210,7 +210,7 @@ services:
     - "${PIGALLERY2_PORT:-8089}:80"
     volumes:
     - ${PIGALLERY2_DATA:-../services-data/system/pigallery2/config}:/app/data/config
-    - ${PIGALLERY2_PHOTOS:-../services-data/media/photos}:/app/data/photos:ro
+    - ${PIGALLERY2_PHOTOS:-../services-data/public/photos}:/app/data/photos:ro
     networks:
     - homelab_net
 
@@ -295,7 +295,7 @@ services:
     ports:
     - "${IMMICH_PORT:-2283}:2283"
     volumes:
-    - ${IMMICH_UPLOAD:-../services-data/media/photos}:/usr/src/app/upload
+    - ${IMMICH_UPLOAD:-../services-data/public/photos}:/usr/src/app/upload
     - ${IMMICH_DATA:-../services-data/system/immich/config}:/usr/src/app/config
     networks:
     - homelab_net

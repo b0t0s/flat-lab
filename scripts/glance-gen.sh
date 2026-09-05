@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # glance-gen.sh — write Glance config with widgets + auto-discovery.
 #
 # Glance's `docker-containers` widget reads `glance.*` (or fallback `homepage.*`) container labels live via the docker socket, so no per-container enumeration is needed here — just provide static widgets (clock, search, resources, calendar, bookmarks) and let the docker widget discover the rest.
@@ -30,7 +30,11 @@ pages:
           - type: clock
             options:
               hour-format: 24h
-          - type: resources
+          - type: server-stats
+            options:
+              servers:
+                - type: local
+                  name: Services
           - type: search
             options:
               search-engine: https://search.${DOMAIN}/search?q=
@@ -57,6 +61,7 @@ pages:
                 links:
                   - title: GitHub
                     url: https://github.com
+                  - title: Proton Mail
                     url: https://account.proton.me
           - type: docker-containers
             options:
